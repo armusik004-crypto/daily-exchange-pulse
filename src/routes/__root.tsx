@@ -79,10 +79,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
       { name: "description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, updated hourly." },
-      { property: "og:title", content: "Kandahar Market Rates" },
-      { property: "og:description", content: "Live and Accurate Market Rates of Kandahar" },
+      { property: "og:title", content: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
+      { property: "og:description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, updated hourly." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
+      { name: "twitter:description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, updated hourly." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c4b22a63-8bed-4c49-8e0a-5bc37335e74c" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c4b22a63-8bed-4c49-8e0a-5bc37335e74c" },
     ],
     links: [
       {
