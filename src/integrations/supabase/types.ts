@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      rates: {
+        Row: {
+          buy: number
+          id: number
+          pair: string
+          raw_source: string | null
+          recorded_at: string
+          recorded_date: string
+          sell: number
+        }
+        Insert: {
+          buy: number
+          id?: number
+          pair: string
+          raw_source?: string | null
+          recorded_at?: string
+          recorded_date?: string
+          sell: number
+        }
+        Update: {
+          buy?: number
+          id?: number
+          pair?: string
+          raw_source?: string | null
+          recorded_at?: string
+          recorded_date?: string
+          sell?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
