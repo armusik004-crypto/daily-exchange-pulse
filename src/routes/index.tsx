@@ -1,9 +1,10 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
-import { useQuery, useSuspenseQuery, queryOptions } from '@tanstack/react-query'
-import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw } from 'lucide-react'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from 'react'
+import { useSuspenseQuery, queryOptions } from '@tanstack/react-query'
+import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3 } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { getRates, type RateRow } from '@/lib/rates.functions'
+import { trendProbability } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { LanguageMenu } from '@/components/LanguageMenu'
+import { useI18n } from '@/i18n'
 
 const ratesQuery = queryOptions({
   queryKey: ['rates'],
@@ -28,10 +31,10 @@ export const Route = createFileRoute('/')({
 
 type PairKey = 'USD_AFN' | 'USD_PKR' | 'AFN_PKR'
 
-const PAIRS: { key: PairKey; from: string; to: string; label: string; fromFlag: string; toFlag: string }[] = [
-  { key: 'USD_AFN', from: 'USD', to: 'AFN', label: 'US Dollar → Afghani', fromFlag: '🇺🇸', toFlag: '🇦🇫' },
-  { key: 'USD_PKR', from: 'USD', to: 'PKR', label: 'US Dollar → Pakistani Kaldar', fromFlag: '🇺🇸', toFlag: '🇵🇰' },
-  { key: 'AFN_PKR', from: 'AFN', to: 'PKR', label: 'Afghani → Pakistani Kaldar', fromFlag: '🇦🇫', toFlag: '🇵🇰' },
+const PAIRS: { key: PairKey; fromFlag: string; toFlag: string }[] = [
+  { key: 'USD_AFN', fromFlag: '🇺🇸', toFlag: '🇦🇫' },
+  { key: 'USD_PKR', fromFlag: '🇺🇸', toFlag: '🇵🇰' },
+  { key: 'AFN_PKR', fromFlag: '🇦🇫', toFlag: '🇵🇰' },
 ]
 
 function groupByPair(rows: RateRow[]) {
@@ -53,8 +56,16 @@ function formatNum(n: number) {
   return n.toFixed(3)
 }
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - +new Date(iso)
+function useTimeAgo(iso?: string) {
+  // Only render on client to avoid hydration mismatch.
+  const [now, setNow] = useState<number | null>(null)
+  useEffect(() => {
+    setNow(Date.now())
+    const t = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  if (!iso || now === null) return null
+  const diff = now - +new Date(iso)
   const m = Math.floor(diff / 60_000)
   if (m < 1) return 'just now'
   if (m < 60) return `${m}m ago`
@@ -67,8 +78,9 @@ function HomePage() {
   const router = useRouter()
   const { data } = useSuspenseQuery(ratesQuery)
   const grouped = useMemo(() => groupByPair(data.rates), [data.rates])
-  const lastUpdated = data.rates[0]?.recorded_at
   const [refreshing, setRefreshing] = useState(false)
+  const { t, dir } = useI18n()
+  const ago = useTimeAgo(data.rates[0]?.recorded_at)
 
   const triggerRefresh = async () => {
     setRefreshing(true)
@@ -83,45 +95,44 @@ function HomePage() {
   const hasData = data.rates.length > 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50/60 via-background to-background dark:from-emerald-950/20">
+    <div dir={dir} className="min-h-screen bg-gradient-to-b from-emerald-50/60 via-background to-background dark:from-emerald-950/20">
       <header className="border-b border-border/60 bg-background/80 backdrop-blur sticky top-0 z-10">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-foreground">
-              Kandahar Market Rates
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
+          <div className="min-w-0">
+            <h1 className="text-base font-bold tracking-tight text-foreground truncate">
+              {t('app_title')}
             </h1>
-            <p className="text-xs text-muted-foreground">
-              Live and Accurate Market Rates of Kandahar
-            </p>
+            <p className="text-[11px] text-muted-foreground truncate">{t('tagline')}</p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={triggerRefresh}
-            disabled={refreshing}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <LanguageMenu />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={triggerRefresh}
+              disabled={refreshing}
+              className="gap-1.5"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{t('refresh')}</span>
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-6">
-        {lastUpdated && (
+        {ago && (
           <p className="text-xs text-muted-foreground text-center">
-            Last updated {timeAgo(lastUpdated)}
+            {t('last_updated')} {ago}
           </p>
         )}
 
         {!hasData ? (
           <Card className="p-8 text-center">
-            <p className="text-sm text-muted-foreground mb-4">
-              No rates loaded yet. Tap refresh to fetch the latest from the Kandahar market.
-            </p>
+            <p className="text-sm text-muted-foreground mb-4">{t('no_data')}</p>
             <Button onClick={triggerRefresh} disabled={refreshing} className="gap-2">
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Load rates
+              {t('load_rates')}
             </Button>
           </Card>
         ) : (
@@ -131,11 +142,13 @@ function HomePage() {
               const latest = history[0]
               const previous = history[1]
               if (!latest) return null
-              const mid = (latest.buy + latest.sell) / 2
-              const prevMid = previous ? (previous.buy + previous.sell) / 2 : mid
+              const mid = (Number(latest.buy) + Number(latest.sell)) / 2
+              const prevMid = previous ? (Number(previous.buy) + Number(previous.sell)) / 2 : mid
               const delta = mid - prevMid
               const pct = prevMid ? (delta / prevMid) * 100 : 0
               const up = delta >= 0
+              const trend = trendProbability(history)
+              const pUp = Math.round(trend.pUp * 100)
               return (
                 <Card key={p.key} className="p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -143,7 +156,9 @@ function HomePage() {
                       <div className="text-2xl">
                         {p.fromFlag} <span className="text-muted-foreground">→</span> {p.toFlag}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{p.label}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t(`pair_${p.key}` as 'pair_USD_AFN')}
+                      </p>
                     </div>
                     <div
                       className={`flex items-center gap-1 text-xs font-medium ${
@@ -162,7 +177,7 @@ function HomePage() {
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3">
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Buy
+                        {t('buy')}
                       </p>
                       <p className="font-mono text-xl font-semibold text-foreground tabular-nums">
                         {formatNum(Number(latest.buy))}
@@ -170,7 +185,7 @@ function HomePage() {
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3">
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Sell
+                        {t('sell')}
                       </p>
                       <p className="font-mono text-xl font-semibold text-foreground tabular-nums">
                         {formatNum(Number(latest.sell))}
@@ -179,7 +194,7 @@ function HomePage() {
                   </div>
 
                   {history.length > 1 && (
-                    <div className="mt-4 h-20">
+                    <div className="mt-3 h-16">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart
                           data={history
@@ -193,11 +208,7 @@ function HomePage() {
                           <XAxis dataKey="date" hide />
                           <YAxis hide domain={['dataMin', 'dataMax']} />
                           <Tooltip
-                            contentStyle={{
-                              fontSize: 11,
-                              padding: 6,
-                              borderRadius: 6,
-                            }}
+                            contentStyle={{ fontSize: 11, padding: 6, borderRadius: 6 }}
                             formatter={(v: number) => formatNum(v)}
                           />
                           <Line
@@ -211,23 +222,39 @@ function HomePage() {
                       </ResponsiveContainer>
                     </div>
                   )}
+
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <div className="text-[11px] text-muted-foreground">
+                      <span className={pUp >= 50 ? 'text-emerald-600' : 'text-rose-600'}>
+                        {pUp}%
+                      </span>{' '}
+                      {pUp >= 50 ? t('prob_up') : t('prob_down').replace('down', 'down')}
+                    </div>
+                    <Button asChild size="sm" variant="ghost" className="gap-1 h-7">
+                      <Link to="/chart/$pair" params={{ pair: p.key }}>
+                        <BarChart3 className="h-3.5 w-3.5" />
+                        {t('candlestick')}
+                      </Link>
+                    </Button>
+                  </div>
                 </Card>
               )
             })}
           </section>
         )}
 
-        {hasData && <Converter rows={data.rates} grouped={grouped} />}
+        {hasData && <Converter grouped={grouped} />}
 
-        <footer className="pt-6 pb-10 text-center text-[11px] text-muted-foreground">
-          Rates reflect the Kandahar local money-changers market. For information only.
+        <footer className="pt-6 pb-24 text-center text-[11px] text-muted-foreground">
+          {t('footer')}
         </footer>
       </main>
     </div>
   )
 }
 
-function Converter({ grouped }: { rows: RateRow[]; grouped: Map<string, RateRow[]> }) {
+function Converter({ grouped }: { grouped: Map<string, RateRow[]> }) {
+  const { t } = useI18n()
   const [from, setFrom] = useState<'USD' | 'AFN' | 'PKR'>('USD')
   const [to, setTo] = useState<'USD' | 'AFN' | 'PKR'>('AFN')
   const [amount, setAmount] = useState('1')
@@ -263,12 +290,12 @@ function Converter({ grouped }: { rows: RateRow[]; grouped: Map<string, RateRow[
 
   return (
     <Card className="p-4">
-      <h2 className="text-sm font-semibold text-foreground mb-3">Quick Converter</h2>
+      <h2 className="text-sm font-semibold text-foreground mb-3">{t('quick_converter')}</h2>
       <div className="grid gap-3">
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              From
+              {t('from')}
             </label>
             <div className="flex gap-2 mt-1">
               <Select value={from} onValueChange={(v) => setFrom(v as 'USD')}>
@@ -294,7 +321,9 @@ function Converter({ grouped }: { rows: RateRow[]; grouped: Map<string, RateRow[
           </Button>
         </div>
         <div>
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">To</label>
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {t('to')}
+          </label>
           <div className="flex gap-2 mt-1">
             <Select value={to} onValueChange={(v) => setTo(v as 'USD')}>
               <SelectTrigger className="w-24">
