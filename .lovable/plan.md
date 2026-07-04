@@ -1,63 +1,57 @@
-# Kandahar Market Rates
+# Kandahar Market Rates — Major Upgrade Plan
 
-A clean English-language web app showing daily currency exchange rates for the Kandahar market. The Telegram source is never mentioned anywhere in the UI — users see it as our own rates service.
+Six independent tracks. I'll ship them in one build.
 
-**Branding:** "Kandahar Market Rates" — tagline "Live and Accurate Market Rates of Kandahar"
+## 1. Fix the scraper (reliable source)
 
-## What the user sees
+The current `Kandahar_Sarafi` channel has been silent/formatting-changed for 4 days. I'll:
 
-**Home / Rates board**
-- Big card per currency vs Afghani (AFN): Buy / Sell prices, last updated time.
-- Green up-arrow / red down-arrow with % change vs yesterday.
-- Search bar to filter currencies by name or code.
-- ⭐ Favorite button — favorited currencies pin to the top (saved in browser).
-- Currencies covered: USD, EUR, GBP, SAR, AED, PKR, IRR (Toman), INR, CNY, CAD, AUD, TRY, RUB — every major world currency the source publishes.
+- Change the source to **`sarafi_kandahar`** (کندهار صرافي) — an active public Telegram channel with preview enabled that posts Kandahar market USD/AFN, USD/PKR, AFN/PKR multiple times daily. Fallback chain: try `sarafi_kandahar` → `Kandahar_Sarafi` → `da_afghan_sarafi` so a single silent channel never breaks the app.
+- Broaden the parser to accept more post templates (emoji separators ✬ ✦ ⭐ ✰, arrow forms `>>` `→` `:`, Persian/Pashto digits ۰-۹ and ٠-٩).
+- Add a `sources_log` insert on every cron run (ok/fail, which channel served the data, sample text) so silent-failures become visible.
+- Keep pg_cron hourly.
 
-**Currency detail page** (tap a card)
-- Today's buy/sell with change indicator.
-- 30-day historical line chart (Recharts).
-- Quick converter at the bottom: type an amount in AFN or the foreign currency, see the other side instantly.
+## 2. Candlestick charts (Binance-style)
 
-**Converter page**
-- Standalone two-field converter with currency dropdowns, swap button, uses latest rates.
+- Add `recharts`-based candlestick using `ComposedChart` + custom `Bar` shape (wick line + body rect, green bullish / red bearish). No new heavy dep.
+- Group rate history into daily OHLC per pair: `open` = first record of day, `close` = last, `high`/`low` = min/max of mid-price.
+- New route `/chart/$pair` with tabs for USD_AFN, USD_PKR, AFN_PKR and a 7d / 30d toggle.
+- Link each home-page card to its chart tab.
 
-**Header**
-- Logo + name, nav: Rates · Converter · About.
-- Subtle "Last updated: 2 hours ago" badge.
+## 3. Trend probability
 
-## Visual direction
+- Server-computed on the fly from the last 30 days of stored rates.
+- Simple, honest model: 7-day SMA slope + realized volatility → probability of continued direction.
+  `p_up = clamp( 0.5 + (slope / (2 * stddev)), 0.05, 0.95 )`
+- Display: "68% probability USD/AFN moves up" with confidence tag (Low/Med/High from sample size).
+- Label the card "Statistical trend — not financial advice".
 
-- Clean, trustworthy, financial-app feel (think Wise / Revolut, not crypto-flashy).
-- Light theme default with dark-mode toggle.
-- Accent color: deep emerald green (#0F766E) for positive, warm red (#DC2626) for negative, neutral slate for UI.
-- Typography: Inter for UI, JetBrains Mono for numbers (so prices align nicely).
-- Card-based layout, generous whitespace, mobile-first (390px tested).
+## 4. Adris AI assistant
 
-## How rates get into the app (technical)
+- New floating chat button + drawer on every page.
+- Uses Lovable AI Gateway (`google/gemini-3-flash-preview`), streamed via AI SDK + AI Elements primitives.
+- Server route `/api/chat` injects a system prompt every turn containing:
+  - Latest rates snapshot (all 3 pairs, buy/sell, timestamp)
+  - Today's OHLC + 7-day trend numbers
+  - Rule: "If asked 'who created you', reply exactly: *I was created by Adris Roohane for the Kandahar Market Rates application to assist users who may not fully understand our app's technical charts or advanced technology.*"
+  - Rule: "Never invent rates. Use only the numbers provided in this system prompt."
+- Localized answers based on the active UI language.
 
-1. **Lovable Cloud** is enabled for database + scheduled jobs.
-2. Tables:
-   - `currencies` (code, name, symbol, flag emoji, display_order)
-   - `rates` (currency_code, buy, sell, recorded_at, source_message_id) — one row per day per currency, public-readable.
-3. **Refresh server route** at `/api/public/cron/refresh-rates`:
-   - Fetches the public preview page `https://t.me/s/kandahar_rates` server-side.
-   - Parses the latest post's text (regex extraction of currency lines like "USD 70.20 / 70.40").
-   - If a post is image-only, falls back to the most recent text-only post and logs a warning.
-   - Upserts rows into `rates` keyed by `(currency_code, date)`.
-   - Protected by a `CRON_SECRET` header check.
-4. **pg_cron** schedules this endpoint to run every hour (so updates appear the same day they're posted, not just once at midnight). Manual "Refresh now" button on an admin-hidden URL for testing.
-5. Frontend reads via a public server function that returns latest + previous day per currency, plus 30-day history for detail pages.
+## 5. PWA (installable)
 
-## Risks I want to flag
+- Manifest-only path per project rules (installability, no offline SW noise): `public/manifest.webmanifest`, icons (generated 192/512 + maskable), theme color, `display: standalone`, `apple-touch-icon`, and `<link rel="manifest">` in root head.
+- No service worker (Lovable preview safety). Chrome's "Add to Home Screen" still works.
 
-- The Telegram channel may post rates as **images** instead of text. The plain HTTP scrape only sees text. If most posts are images, we'll need to add OCR (Lovable AI vision) as a second step — I'll build the text path first, see what comes through, and add OCR only if needed.
-- t.me/s/ public preview must be enabled on the channel (it usually is for public channels). If it's disabled, we'd need a different ingestion path.
+## 6. Language switcher (Pashto / Dari / English)
 
-## Out of scope for v1
+- Lightweight `i18n` module: JSON dictionaries in `src/i18n/{en,ps,fa}.ts`, `useT()` hook, localStorage persistence, header dropdown.
+- `<html dir="rtl">` when Pashto/Dari is active.
+- Cover all UI strings (header, cards, converter, chart tabs, AI drawer, footer). AI system prompt receives the active language so replies match.
 
-- Push/email alerts when rates change.
-- Multi-language UI (English only per your request).
-- User accounts (favorites are stored in the browser).
-- Trading or transaction features — display only.
+## Technical notes (for reference)
 
-Tell me if you want to adjust the currency list, branding name, or feature set before I build.
+- Migration: add `sources_log` table (id, source, ok, note, created_at) with RLS locked; also index `rates(pair, recorded_date)` if missing.
+- Files touched: new `src/routes/chart.$pair.tsx`, `src/routes/api/chat.ts`, `src/components/CandlestickChart.tsx`, `src/components/AdrisChat.tsx`, `src/components/LanguageMenu.tsx`, `src/i18n/*`, `src/lib/analytics.ts`, `public/manifest.webmanifest`, updates to `refresh-rates.ts`, `index.tsx`, `__root.tsx`.
+- Deps to add: `ai`, `@ai-sdk/react`, `@ai-sdk/openai-compatible`, `zod` (already), plus AI Elements: `bun x ai-elements@latest add conversation message prompt-input shimmer`.
+
+Approve and I'll build it in one pass.

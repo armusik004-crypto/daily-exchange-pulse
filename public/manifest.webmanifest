@@ -1,0 +1,15 @@
+{
+  "name": "Kandahar Market Rates",
+  "short_name": "KM Rates",
+  "description": "Live and accurate Kandahar market exchange rates — USD, PKR, AFN buy/sell, candlestick charts and Adris AI assistant.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1220",
+  "theme_color": "#059669",
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

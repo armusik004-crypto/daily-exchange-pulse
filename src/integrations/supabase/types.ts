@@ -44,6 +44,30 @@ export type Database = {
         }
         Relationships: []
       }
+      sources_log: {
+        Row: {
+          created_at: string
+          id: number
+          note: string | null
+          ok: boolean
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          note?: string | null
+          ok: boolean
+          source: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          note?: string | null
+          ok?: boolean
+          source?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

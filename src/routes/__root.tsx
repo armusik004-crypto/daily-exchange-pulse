@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { I18nProvider } from "../i18n";
+import { AdrisChat } from "../components/AdrisChat";
 
 function NotFoundComponent() {
   return (
@@ -76,23 +78,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#059669" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "KM Rates" },
       { title: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
-      { name: "description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, updated hourly." },
+      { name: "description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, candlestick charts and Adris AI assistant." },
       { property: "og:title", content: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
       { property: "og:description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, updated hourly." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
       { name: "twitter:description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, updated hourly." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c4b22a63-8bed-4c49-8e0a-5bc37335e74c" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c4b22a63-8bed-4c49-8e0a-5bc37335e74c" },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+      { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", href: "/icon-512.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/icon-512.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -120,8 +124,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <I18nProvider>
+        <Outlet />
+        <AdrisChat />
+      </I18nProvider>
     </QueryClientProvider>
   );
 }
