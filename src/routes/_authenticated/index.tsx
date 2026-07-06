@@ -1,10 +1,11 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import { useSuspenseQuery, queryOptions } from '@tanstack/react-query'
-import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3 } from 'lucide-react'
+import { useSuspenseQuery, useQuery, queryOptions } from '@tanstack/react-query'
+import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { getRates, type RateRow } from '@/lib/rates.functions'
 import { trendProbability } from '@/lib/analytics'
+import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -24,7 +25,7 @@ const ratesQuery = queryOptions({
   staleTime: 60_000,
 })
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_authenticated/')({
   loader: ({ context }) => context.queryClient.ensureQueryData(ratesQuery),
   component: HomePage,
 })
@@ -76,11 +77,30 @@ function useTimeAgo(iso?: string) {
 
 function HomePage() {
   const router = useRouter()
+  const navigate = useNavigate()
   const { data } = useSuspenseQuery(ratesQuery)
   const grouped = useMemo(() => groupByPair(data.rates), [data.rates])
   const [refreshing, setRefreshing] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const { t, dir } = useI18n()
   const ago = useTimeAgo(data.rates[0]?.recorded_at)
+
+  const { data: session } = useQuery({
+    queryKey: ['auth-user'],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getUser()
+      if (!data.user) return { email: null, isAdmin: false }
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+      return {
+        email: data.user.email ?? null,
+        isAdmin: !!roles?.some((r) => r.role === 'admin'),
+      }
+    },
+    staleTime: 60_000,
+  })
 
   const triggerRefresh = async () => {
     setRefreshing(true)
@@ -89,6 +109,16 @@ function HomePage() {
       await router.invalidate()
     } finally {
       setRefreshing(false)
+    }
+  }
+
+  const signOut = async () => {
+    setSigningOut(true)
+    try {
+      await supabase.auth.signOut()
+      navigate({ to: '/auth', replace: true })
+    } finally {
+      setSigningOut(false)
     }
   }
 
@@ -102,7 +132,14 @@ function HomePage() {
             <h1 className="text-base font-bold tracking-tight text-foreground truncate">
               {t('app_title')}
             </h1>
-            <p className="text-[11px] text-muted-foreground truncate">{t('tagline')}</p>
+            <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+              {session?.isAdmin && (
+                <span className="inline-flex items-center gap-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-1 py-0.5 text-[10px] font-medium">
+                  <ShieldCheck className="h-2.5 w-2.5" /> Admin
+                </span>
+              )}
+              <span className="truncate">{session?.email ?? t('tagline')}</span>
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <LanguageMenu />
@@ -116,9 +153,20 @@ function HomePage() {
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{t('refresh')}</span>
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={signOut}
+              disabled={signingOut}
+              className="gap-1.5"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       </header>
+
 
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-6">
         {ago && (

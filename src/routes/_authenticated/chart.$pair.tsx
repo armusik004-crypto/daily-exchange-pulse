@@ -18,7 +18,7 @@ const ratesQuery = queryOptions({
   staleTime: 60_000,
 });
 
-export const Route = createFileRoute("/chart/$pair")({
+export const Route = createFileRoute("/_authenticated/chart/$pair")({
   loader: async ({ context, params }) => {
     if (!PAIRS.includes(params.pair as Pair)) throw notFound();
     return context.queryClient.ensureQueryData(ratesQuery);
