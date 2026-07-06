@@ -108,14 +108,27 @@ async function tryChannel(channel: string): Promise<{ text: string; rates: Parse
   let m: RegExpExecArray | null
   while ((m = postRegex.exec(html)) !== null) posts.push(normalizeDigits(stripHtml(m[1])))
 
-  for (let i = posts.length - 1; i >= 0; i--) {
+  // Channels like kandahar123 post each pair as a SEPARATE message.
+  // Walk newest -> oldest and keep the most recent rate found per pair.
+  const found = new Map<Pair, ParsedRate>()
+  const usedTexts: string[] = []
+
+  for (let i = posts.length - 1; i >= 0 && found.size < 3; i--) {
     const text = posts[i]
     let rates = sanityCheck(parseDetailed(text))
-    if (rates.length < 3) {
-      const compact = sanityCheck(parseCompact(text))
-      if (compact.length >= rates.length) rates = compact
+    if (rates.length === 0) rates = sanityCheck(parseCompact(text))
+    for (const r of rates) {
+      if (!found.has(r.pair)) {
+        found.set(r.pair, r)
+        usedTexts.push(text.slice(0, 120))
+      }
     }
-    if (new Set(rates.map((r) => r.pair)).size === 3) return { text, rates }
+    // Single post containing all 3 pairs still wins immediately
+    if (found.size === 3) break
+  }
+
+  if (found.size === 3) {
+    return { text: usedTexts.join(' | '), rates: Array.from(found.values()) }
   }
   return null
 }
