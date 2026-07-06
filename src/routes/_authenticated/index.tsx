@@ -24,7 +24,7 @@ const ratesQuery = queryOptions({
   staleTime: 60_000,
 })
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_authenticated/')({
   loader: ({ context }) => context.queryClient.ensureQueryData(ratesQuery),
   component: HomePage,
 })
