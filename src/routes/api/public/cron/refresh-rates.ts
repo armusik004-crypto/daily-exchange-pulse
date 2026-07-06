@@ -18,13 +18,7 @@ export const Route = createFileRoute('/api/public/cron/refresh-rates')({
 })
 
 // Ordered by "most likely active first". Add/remove as channels change.
-const SOURCE_CHANNELS = [
-  'Kandahar_Sarafi',
-  'sarafi_kandahar',
-  'kandahar_rates',
-  'KandaharSarafi',
-  'da_afghan_sarafi',
-]
+const SOURCE_CHANNELS = ['kandahar123']
 
 type Pair = 'USD_AFN' | 'USD_PKR' | 'AFN_PKR'
 type ParsedRate = { pair: Pair; buy: number; sell: number }
