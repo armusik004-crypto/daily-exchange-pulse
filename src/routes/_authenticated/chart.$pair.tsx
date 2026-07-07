@@ -1,8 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { getRates, type RateRow } from "@/lib/rates.functions";
+import { type RateRow } from "@/lib/rates.functions";
+import { ratesQuery } from "@/lib/rates-query";
 import { toOHLC, trendProbability } from "@/lib/analytics";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { Card } from "@/components/ui/card";
@@ -11,12 +12,6 @@ import { useI18n } from "@/i18n";
 
 const PAIRS = ["USD_AFN", "USD_PKR", "AFN_PKR"] as const;
 type Pair = (typeof PAIRS)[number];
-
-const ratesQuery = queryOptions({
-  queryKey: ["rates"],
-  queryFn: () => getRates(),
-  staleTime: 60_000,
-});
 
 export const Route = createFileRoute("/_authenticated/chart/$pair")({
   loader: async ({ context, params }) => {
