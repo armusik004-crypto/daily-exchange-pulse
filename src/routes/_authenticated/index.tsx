@@ -165,6 +165,12 @@ function HomePage() {
 
 
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-6">
+        {data.fromCache && (
+          <div className="flex items-center justify-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+            <WifiOff className="h-3.5 w-3.5" />
+            Showing cached rates — reconnecting…
+          </div>
+        )}
         {ago && (
           <p className="text-xs text-muted-foreground text-center">
             {t('last_updated')} {ago}
@@ -293,6 +299,8 @@ function HomePage() {
           {t('footer')}
         </footer>
       </main>
+
+      {session?.isAdmin && <AdminChat />}
     </div>
   )
 }
