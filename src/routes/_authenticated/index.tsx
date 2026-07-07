@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import { useSuspenseQuery, useQuery, queryOptions } from '@tanstack/react-query'
-import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck } from 'lucide-react'
+import { useSuspenseQuery, useQuery } from '@tanstack/react-query'
+import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck, WifiOff } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { getRates, type RateRow } from '@/lib/rates.functions'
+import { type RateRow } from '@/lib/rates.functions'
+import { ratesQuery } from '@/lib/rates-query'
 import { trendProbability } from '@/lib/analytics'
 import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -17,13 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LanguageMenu } from '@/components/LanguageMenu'
+import { AdminChat } from '@/components/AdminChat'
 import { useI18n } from '@/i18n'
-
-const ratesQuery = queryOptions({
-  queryKey: ['rates'],
-  queryFn: () => getRates(),
-  staleTime: 60_000,
-})
 
 export const Route = createFileRoute('/_authenticated/')({
   loader: ({ context }) => context.queryClient.ensureQueryData(ratesQuery),
