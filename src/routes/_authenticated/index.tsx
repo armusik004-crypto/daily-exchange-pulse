@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import { useSuspenseQuery, useQuery, queryOptions } from '@tanstack/react-query'
-import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck } from 'lucide-react'
+import { useSuspenseQuery, useQuery } from '@tanstack/react-query'
+import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck, WifiOff } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { getRates, type RateRow } from '@/lib/rates.functions'
+import { type RateRow } from '@/lib/rates.functions'
+import { ratesQuery } from '@/lib/rates-query'
 import { trendProbability } from '@/lib/analytics'
 import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -17,13 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LanguageMenu } from '@/components/LanguageMenu'
+import { AdminChat } from '@/components/AdminChat'
 import { useI18n } from '@/i18n'
-
-const ratesQuery = queryOptions({
-  queryKey: ['rates'],
-  queryFn: () => getRates(),
-  staleTime: 60_000,
-})
 
 export const Route = createFileRoute('/_authenticated/')({
   loader: ({ context }) => context.queryClient.ensureQueryData(ratesQuery),
@@ -169,6 +165,12 @@ function HomePage() {
 
 
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-6">
+        {data.fromCache && (
+          <div className="flex items-center justify-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+            <WifiOff className="h-3.5 w-3.5" />
+            Showing cached rates — reconnecting…
+          </div>
+        )}
         {ago && (
           <p className="text-xs text-muted-foreground text-center">
             {t('last_updated')} {ago}
@@ -297,6 +299,8 @@ function HomePage() {
           {t('footer')}
         </footer>
       </main>
+
+      {session?.isAdmin && <AdminChat />}
     </div>
   )
 }
