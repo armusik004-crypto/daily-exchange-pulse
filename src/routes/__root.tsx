@@ -84,6 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "KM Rates" },
+      { name: "monetag", content: "f31effe9412e8e3cd268994e7c88d774" },
       { title: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
       { name: "description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, candlestick charts and Adris AI assistant." },
       { property: "og:title", content: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
