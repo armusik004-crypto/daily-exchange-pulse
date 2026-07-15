@@ -149,16 +149,22 @@ function HomePage() {
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{t('refresh')}</span>
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={signOut}
-              disabled={signingOut}
-              className="gap-1.5"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
+            {session?.email ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={signOut}
+                disabled={signingOut}
+                className="gap-1.5"
+                aria-label="Sign out"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button asChild size="sm" variant="ghost" className="gap-1.5">
+                <Link to="/auth">Sign in</Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>
