@@ -13,7 +13,7 @@ import { useI18n } from "@/i18n";
 const PAIRS = ["USD_AFN", "USD_PKR", "AFN_PKR"] as const;
 type Pair = (typeof PAIRS)[number];
 
-export const Route = createFileRoute("/_authenticated/chart/$pair")({
+export const Route = createFileRoute("/chart/$pair")({
   loader: async ({ context, params }) => {
     if (!PAIRS.includes(params.pair as Pair)) throw notFound();
     return context.queryClient.ensureQueryData(ratesQuery);

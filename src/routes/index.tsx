@@ -21,7 +21,7 @@ import { LanguageMenu } from '@/components/LanguageMenu'
 import { AdminChat } from '@/components/AdminChat'
 import { useI18n } from '@/i18n'
 
-export const Route = createFileRoute('/_authenticated/')({
+export const Route = createFileRoute('/')({
   loader: ({ context }) => context.queryClient.ensureQueryData(ratesQuery),
   component: HomePage,
 })
