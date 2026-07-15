@@ -21,7 +21,7 @@ import { LanguageMenu } from '@/components/LanguageMenu'
 import { AdminChat } from '@/components/AdminChat'
 import { useI18n } from '@/i18n'
 
-export const Route = createFileRoute('/_authenticated/')({
+export const Route = createFileRoute('/')({
   loader: ({ context }) => context.queryClient.ensureQueryData(ratesQuery),
   component: HomePage,
 })
@@ -112,7 +112,7 @@ function HomePage() {
     setSigningOut(true)
     try {
       await supabase.auth.signOut()
-      navigate({ to: '/auth', replace: true })
+      navigate({ to: '/', replace: true })
     } finally {
       setSigningOut(false)
     }
@@ -149,16 +149,22 @@ function HomePage() {
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{t('refresh')}</span>
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={signOut}
-              disabled={signingOut}
-              className="gap-1.5"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
+            {session?.email ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={signOut}
+                disabled={signingOut}
+                className="gap-1.5"
+                aria-label="Sign out"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button asChild size="sm" variant="ghost" className="gap-1.5">
+                <Link to="/auth">Sign in</Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>
