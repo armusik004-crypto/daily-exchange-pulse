@@ -112,7 +112,7 @@ function HomePage() {
     setSigningOut(true)
     try {
       await supabase.auth.signOut()
-      navigate({ to: '/auth', replace: true })
+      navigate({ to: '/', replace: true })
     } finally {
       setSigningOut(false)
     }
