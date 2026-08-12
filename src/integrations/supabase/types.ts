@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      rate_likes: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: number
+          rate_id: number
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: number
+          rate_id: number
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: number
+          rate_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_likes_rate_id_fkey"
+            columns: ["rate_id"]
+            isOneToOne: false
+            referencedRelation: "rates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rate_views: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: number
+          rate_id: number
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: number
+          rate_id: number
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: number
+          rate_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_views_rate_id_fkey"
+            columns: ["rate_id"]
+            isOneToOne: false
+            referencedRelation: "rates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rates: {
         Row: {
           buy: number

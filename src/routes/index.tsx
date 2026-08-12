@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query'
-import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck, WifiOff } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck, WifiOff, Eye, Heart, Clock } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { type RateRow } from '@/lib/rates.functions'
 import { ratesQuery } from '@/lib/rates-query'
 import { trendProbability } from '@/lib/analytics'
+import { useEngagement } from '@/lib/use-engagement'
 import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -53,6 +54,21 @@ function formatNum(n: number) {
   return n.toFixed(3)
 }
 
+function formatKabulTime(iso: string) {
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kabul',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      day: '2-digit',
+      month: 'short',
+    }).format(new Date(iso))
+  } catch {
+    return ''
+  }
+}
+
 function useTimeAgo(iso?: string) {
   // Only render on client to avoid hydration mismatch.
   const [now, setNow] = useState<number | null>(null)
@@ -80,6 +96,14 @@ function HomePage() {
   const [signingOut, setSigningOut] = useState(false)
   const { t, dir } = useI18n()
   const ago = useTimeAgo(data.rates[0]?.recorded_at)
+  const latestIds = useMemo(
+    () =>
+      PAIRS.map((p) => grouped.get(p.key)?.[0]?.id)
+        .filter((id): id is number => typeof id === 'number')
+        .sort((a, b) => a - b),
+    [grouped],
+  )
+  const { items: engagement, like } = useEngagement(latestIds)
 
   const { data: session } = useQuery({
     queryKey: ['auth-user'],
@@ -215,6 +239,10 @@ function HomePage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         {t(`pair_${p.key}` as 'pair_USD_AFN')}
                       </p>
+                      <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
+                        <Clock className="h-3 w-3" />
+                        {t('posted_at')} {formatKabulTime(latest.recorded_at)}
+                      </p>
                     </div>
                     <div
                       className={`flex items-center gap-1 text-xs font-medium ${
@@ -278,6 +306,30 @@ function HomePage() {
                       </ResponsiveContainer>
                     </div>
                   )}
+
+                  <div className="mt-3 flex items-center gap-3 border-t border-border/60 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => like(latest.id)}
+                      aria-pressed={!!engagement[latest.id]?.liked}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                        engagement[latest.id]?.liked
+                          ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400'
+                          : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <Heart
+                        className={`h-3.5 w-3.5 ${engagement[latest.id]?.liked ? 'fill-current' : ''}`}
+                      />
+                      <span className="tabular-nums">{engagement[latest.id]?.likes ?? 0}</span>
+                      <span className="hidden sm:inline">{t('likes')}</span>
+                    </button>
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Eye className="h-3.5 w-3.5" />
+                      <span className="tabular-nums">{engagement[latest.id]?.views ?? 0}</span>
+                      <span className="hidden sm:inline">{t('views')}</span>
+                    </span>
+                  </div>
 
                   <div className="mt-3 flex items-center justify-between gap-2">
                     <div className="text-[11px] text-muted-foreground">

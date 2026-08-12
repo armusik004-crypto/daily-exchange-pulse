@@ -11,6 +11,7 @@ function publicClient() {
 }
 
 export type RateRow = {
+  id: number
   pair: string
   buy: number
   sell: number
@@ -23,7 +24,7 @@ export const getRates = createServerFn({ method: 'GET' }).handler(async () => {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   const { data, error } = await supabase
     .from('rates')
-    .select('pair,buy,sell,recorded_at,recorded_date')
+    .select('id,pair,buy,sell,recorded_at,recorded_date')
     .gte('recorded_date', since)
     .order('recorded_at', { ascending: false })
     .limit(1000)
