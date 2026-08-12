@@ -94,8 +94,11 @@ function HomePage() {
   const grouped = useMemo(() => groupByPair(data.rates), [data.rates])
   const [refreshing, setRefreshing] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const { t, dir } = useI18n()
   const ago = useTimeAgo(data.rates[0]?.recorded_at)
+
   const latestIds = useMemo(
     () =>
       PAIRS.map((p) => grouped.get(p.key)?.[0]?.id)
