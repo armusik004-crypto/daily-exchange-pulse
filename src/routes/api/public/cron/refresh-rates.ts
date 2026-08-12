@@ -21,7 +21,8 @@ export const Route = createFileRoute('/api/public/cron/refresh-rates')({
 const SOURCE_CHANNELS = ['kandahar123']
 
 type Pair = 'USD_AFN' | 'USD_PKR' | 'AFN_PKR'
-type ParsedRate = { pair: Pair; buy: number; sell: number }
+type ParsedRate = { pair: Pair; buy: number; sell: number; at?: string }
+
 
 // Persian/Arabic digits -> ASCII, plus Arabic->Persian letter unification (ك->ک, ي->ی)
 function normalizeDigits(s: string): string {
