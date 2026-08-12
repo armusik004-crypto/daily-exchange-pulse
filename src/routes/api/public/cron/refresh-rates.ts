@@ -104,10 +104,17 @@ async function tryChannel(channel: string): Promise<{ text: string; rates: Parse
   if (!res.ok) return null
   const html = await res.text()
   const postRegex =
-    /tgme_widget_message_text[^>]*>([\s\S]*?)<\/div>\s*<div class="tgme_widget_message_footer/g
-  const posts: string[] = []
+    /tgme_widget_message_text[^>]*>([\s\S]*?)<\/div>\s*<div class="tgme_widget_message_footer([\s\S]*?)<\/div>\s*<\/div>/g
+  const posts: { text: string; at?: string }[] = []
   let m: RegExpExecArray | null
-  while ((m = postRegex.exec(html)) !== null) posts.push(normalizeDigits(stripHtml(m[1])))
+  while ((m = postRegex.exec(html)) !== null) {
+    const footer = m[2] ?? ''
+    const dt = /datetime="([^"]+)"/.exec(footer)?.[1]
+    posts.push({
+      text: normalizeDigits(stripHtml(m[1])),
+      at: dt ? new Date(dt).toISOString() : undefined,
+    })
+  }
 
   // Channels like kandahar123 post each pair as a SEPARATE message.
   // Walk newest -> oldest and keep the most recent rate found per pair.
@@ -115,12 +122,12 @@ async function tryChannel(channel: string): Promise<{ text: string; rates: Parse
   const usedTexts: string[] = []
 
   for (let i = posts.length - 1; i >= 0 && found.size < 3; i--) {
-    const text = posts[i]
+    const { text, at } = posts[i]
     let rates = sanityCheck(parseDetailed(text))
     if (rates.length === 0) rates = sanityCheck(parseCompact(text))
     for (const r of rates) {
       if (!found.has(r.pair)) {
-        found.set(r.pair, r)
+        found.set(r.pair, { ...r, at })
         usedTexts.push(text.slice(0, 120))
       }
     }
@@ -133,6 +140,7 @@ async function tryChannel(channel: string): Promise<{ text: string; rates: Parse
   }
   return null
 }
+
 
 async function runRefresh() {
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
