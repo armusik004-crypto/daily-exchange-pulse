@@ -94,8 +94,11 @@ function HomePage() {
   const grouped = useMemo(() => groupByPair(data.rates), [data.rates])
   const [refreshing, setRefreshing] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const { t, dir } = useI18n()
   const ago = useTimeAgo(data.rates[0]?.recorded_at)
+
   const latestIds = useMemo(
     () =>
       PAIRS.map((p) => grouped.get(p.key)?.[0]?.id)
@@ -195,7 +198,7 @@ function HomePage() {
 
 
       <main className="mx-auto max-w-3xl px-4 py-6 space-y-6">
-        {data.fromCache && (
+        {mounted && data.fromCache && (
           <div className="flex items-center justify-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
             <WifiOff className="h-3.5 w-3.5" />
             Showing cached rates — reconnecting…

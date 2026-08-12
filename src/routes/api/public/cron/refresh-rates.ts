@@ -21,7 +21,8 @@ export const Route = createFileRoute('/api/public/cron/refresh-rates')({
 const SOURCE_CHANNELS = ['kandahar123']
 
 type Pair = 'USD_AFN' | 'USD_PKR' | 'AFN_PKR'
-type ParsedRate = { pair: Pair; buy: number; sell: number }
+type ParsedRate = { pair: Pair; buy: number; sell: number; at?: string }
+
 
 // Persian/Arabic digits -> ASCII, plus Arabic->Persian letter unification (ك->ک, ي->ی)
 function normalizeDigits(s: string): string {
@@ -103,10 +104,17 @@ async function tryChannel(channel: string): Promise<{ text: string; rates: Parse
   if (!res.ok) return null
   const html = await res.text()
   const postRegex =
-    /tgme_widget_message_text[^>]*>([\s\S]*?)<\/div>\s*<div class="tgme_widget_message_footer/g
-  const posts: string[] = []
+    /tgme_widget_message_text[^>]*>([\s\S]*?)<\/div>\s*<div class="tgme_widget_message_footer([\s\S]*?)<\/div>\s*<\/div>/g
+  const posts: { text: string; at?: string }[] = []
   let m: RegExpExecArray | null
-  while ((m = postRegex.exec(html)) !== null) posts.push(normalizeDigits(stripHtml(m[1])))
+  while ((m = postRegex.exec(html)) !== null) {
+    const footer = m[2] ?? ''
+    const dt = /datetime="([^"]+)"/.exec(footer)?.[1]
+    posts.push({
+      text: normalizeDigits(stripHtml(m[1])),
+      at: dt ? new Date(dt).toISOString() : undefined,
+    })
+  }
 
   // Channels like kandahar123 post each pair as a SEPARATE message.
   // Walk newest -> oldest and keep the most recent rate found per pair.
@@ -114,12 +122,12 @@ async function tryChannel(channel: string): Promise<{ text: string; rates: Parse
   const usedTexts: string[] = []
 
   for (let i = posts.length - 1; i >= 0 && found.size < 3; i--) {
-    const text = posts[i]
+    const { text, at } = posts[i]
     let rates = sanityCheck(parseDetailed(text))
     if (rates.length === 0) rates = sanityCheck(parseCompact(text))
     for (const r of rates) {
       if (!found.has(r.pair)) {
-        found.set(r.pair, r)
+        found.set(r.pair, { ...r, at })
         usedTexts.push(text.slice(0, 120))
       }
     }
@@ -132,6 +140,7 @@ async function tryChannel(channel: string): Promise<{ text: string; rates: Parse
   }
   return null
 }
+
 
 async function runRefresh() {
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
@@ -166,18 +175,21 @@ async function runRefresh() {
     )
   }
 
-  const today = new Date(
-    new Date().toLocaleString('en-US', { timeZone: 'Asia/Kabul' }),
-  ).toISOString().slice(0, 10)
+  const kabulDate = (iso: string) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kabul' }).format(new Date(iso))
 
-  const rows = chosen.rates.map((r) => ({
-    pair: r.pair,
-    buy: r.buy,
-    sell: r.sell,
-    recorded_at: new Date().toISOString(),
-    recorded_date: today,
-    raw_source: `[${chosen!.source}] ${chosen!.text.slice(0, 480)}`,
-  }))
+  const rows = chosen.rates.map((r) => {
+    const at = r.at ?? new Date().toISOString()
+    return {
+      pair: r.pair,
+      buy: r.buy,
+      sell: r.sell,
+      recorded_at: at,
+      recorded_date: kabulDate(at),
+      raw_source: `[${chosen!.source}] ${chosen!.text.slice(0, 480)}`,
+    }
+  })
+
 
   const { error } = await supabaseAdmin
     .from('rates')
