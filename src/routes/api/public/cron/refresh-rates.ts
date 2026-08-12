@@ -175,18 +175,21 @@ async function runRefresh() {
     )
   }
 
-  const today = new Date(
-    new Date().toLocaleString('en-US', { timeZone: 'Asia/Kabul' }),
-  ).toISOString().slice(0, 10)
+  const kabulDate = (iso: string) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kabul' }).format(new Date(iso))
 
-  const rows = chosen.rates.map((r) => ({
-    pair: r.pair,
-    buy: r.buy,
-    sell: r.sell,
-    recorded_at: new Date().toISOString(),
-    recorded_date: today,
-    raw_source: `[${chosen!.source}] ${chosen!.text.slice(0, 480)}`,
-  }))
+  const rows = chosen.rates.map((r) => {
+    const at = r.at ?? new Date().toISOString()
+    return {
+      pair: r.pair,
+      buy: r.buy,
+      sell: r.sell,
+      recorded_at: at,
+      recorded_date: kabulDate(at),
+      raw_source: `[${chosen!.source}] ${chosen!.text.slice(0, 480)}`,
+    }
+  })
+
 
   const { error } = await supabaseAdmin
     .from('rates')
