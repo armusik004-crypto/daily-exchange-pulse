@@ -1,0 +1,1 @@
+DELETE FROM public.rates WHERE recorded_date = '2026-08-12';
