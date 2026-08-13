@@ -163,6 +163,16 @@ function HomePage() {
   )
   const { items: engagement, like } = useEngagement(latestIds)
 
+  const latestStamps = useMemo(
+    () =>
+      PAIRS.map((p) => ({ pair: p.key, at: grouped.get(p.key)?.[0]?.recorded_at ?? '' })).filter(
+        (l) => l.at,
+      ),
+    [grouped],
+  )
+  const { unseen, markSeen } = useUnseen(latestStamps)
+  const { copied, copy } = useCopy()
+
   const { data: session } = useQuery({
     queryKey: ['auth-user'],
     queryFn: async () => {
@@ -265,6 +275,20 @@ function HomePage() {
           </p>
         )}
 
+        {unseen.size > 0 && (
+          <button
+            type="button"
+            onClick={markSeen}
+            className="w-full flex items-center justify-center gap-2 rounded-lg border border-emerald-300/60 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800/50 px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 shadow-sm transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
+            </span>
+            {t('new_rates_banner')} ({unseen.size})
+          </button>
+        )}
+
         {!hasData ? (
           <Card className="p-8 text-center">
             <p className="text-sm text-muted-foreground mb-4">{t('no_data')}</p>
@@ -287,19 +311,28 @@ function HomePage() {
               const up = delta >= 0
               const trend = trendProbability(history)
               const pUp = Math.round(trend.pUp * 100)
+              const isNew = unseen.has(p.key)
               return (
                 <Card key={p.key} className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-2xl">
-                        {p.fromFlag} <span className="text-muted-foreground">→</span> {p.toFlag}
+                      <div className="flex items-center gap-2 text-2xl">
+                        <span>
+                          {p.fromFlag} <span className="text-muted-foreground">→</span> {p.toFlag}
+                        </span>
+                        {isNew && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 animate-pulse">
+                            <Sparkles className="h-2.5 w-2.5" />
+                            {t('new_badge')}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {t(`pair_${p.key}` as 'pair_USD_AFN')}
                       </p>
                       <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
                         <Clock className="h-3 w-3" />
-                        {t('posted_at')} {formatKabulTime(latest.recorded_at)}
+                        {t('posted_at')} {mounted ? formatKabulTime(latest.recorded_at) : ''}
                       </p>
                     </div>
                     <div
@@ -387,6 +420,31 @@ function HomePage() {
                       <span className="tabular-nums">{engagement[latest.id]?.views ?? 0}</span>
                       <span className="hidden sm:inline">{t('views')}</span>
                     </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copy(
+                          p.key,
+                          `${t(`pair_${p.key}` as 'pair_USD_AFN')}\n${t('buy')}: ${formatNum(
+                            Number(latest.buy),
+                          )}\n${t('sell')}: ${formatNum(Number(latest.sell))}\n${t(
+                            'posted_at',
+                          )} ${formatKabulTime(latest.recorded_at)}\n${t('app_title')}`,
+                        )
+                      }
+                      className={`ms-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                        copied === p.key
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 scale-105'
+                          : 'bg-muted/60 text-muted-foreground hover:bg-muted active:scale-95'
+                      }`}
+                    >
+                      {copied === p.key ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                      {copied === p.key ? t('copied') : t('copy')}
+                    </button>
                   </div>
 
                   <div className="mt-3 flex items-center justify-between gap-2">
