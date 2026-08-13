@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query'
-import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck, WifiOff, Eye, Heart, Clock } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck, WifiOff, Eye, Heart, Clock, Copy, Check, Sparkles } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { type RateRow } from '@/lib/rates.functions'
 import { ratesQuery } from '@/lib/rates-query'
@@ -85,6 +85,61 @@ function useTimeAgo(iso?: string) {
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
   return `${Math.floor(h / 24)}d ago`
+}
+
+const SEEN_KEY = 'km_seen_rates_v1'
+
+/** Marks pairs whose newest post the user has not seen yet. */
+function useUnseen(latest: { pair: string; at: string }[]) {
+  const [seen, setSeen] = useState<Record<string, string> | null>(null)
+  const sig = latest.map((l) => `${l.pair}:${l.at}`).join('|')
+
+  useEffect(() => {
+    try {
+      setSeen(JSON.parse(localStorage.getItem(SEEN_KEY) ?? '{}'))
+    } catch {
+      setSeen({})
+    }
+  }, [])
+
+  const unseen = useMemo(() => {
+    if (!seen) return new Set<string>()
+    const s = new Set<string>()
+    for (const l of latest) if (seen[l.pair] !== l.at) s.add(l.pair)
+    return s
+  }, [seen, sig]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const markSeen = useCallback(() => {
+    const next: Record<string, string> = {}
+    for (const l of latest) next[l.pair] = l.at
+    try {
+      localStorage.setItem(SEEN_KEY, JSON.stringify(next))
+    } catch {
+      /* ignore */
+    }
+    setSeen(next)
+  }, [sig]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { unseen, markSeen }
+}
+
+function useCopy() {
+  const [copied, setCopied] = useState<string | null>(null)
+  const copy = useCallback(async (key: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      ta.remove()
+    }
+    setCopied(key)
+    setTimeout(() => setCopied((c) => (c === key ? null : c)), 1800)
+  }, [])
+  return { copied, copy }
 }
 
 function HomePage() {
