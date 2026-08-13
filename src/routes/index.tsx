@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query'
 import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck, WifiOff, Eye, Heart, Clock, Copy, Check, Sparkles } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
