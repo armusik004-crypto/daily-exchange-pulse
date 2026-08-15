@@ -1,56 +1,32 @@
-// Builds an offline-capable static bundle (dist/offline-app) that can be
-// wrapped into an Android APK with Capacitor, and zips it for download.
+// Packages the offline/APK bundle.
 //
-//   bun run build && node scripts/build-offline.mjs
+//   OFFLINE_APP=1 bun run build && node scripts/build-offline.mjs
 //
-import { readdirSync, mkdirSync, cpSync, writeFileSync, rmSync, existsSync } from "node:fs";
+// OFFLINE_APP=1 makes Vite prerender a static SPA shell at dist/client/index.html.
+// This script copies dist/client to dist/offline-app, adds a Capacitor config,
+// and zips everything into kandahar-rates-offline.zip.
+import { mkdirSync, cpSync, writeFileSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
 
 const CLIENT = "dist/client";
 const OUT = "dist/offline-app";
 
-if (!existsSync(join(CLIENT, "assets"))) {
-  console.error("Run `bun run build` first — dist/client/assets is missing.");
-  process.exit(1);
-}
-
-const assets = readdirSync(join(CLIENT, "assets"));
-const entry = assets.find((f) => /^index-.*\.js$/.test(f));
-const css = assets.find((f) => /\.css$/.test(f));
-if (!entry) {
-  console.error("Could not find the client entry chunk in dist/client/assets.");
+if (!existsSync(join(CLIENT, "index.html"))) {
+  console.error("Missing dist/client/index.html — run `OFFLINE_APP=1 bun run build` first.");
   process.exit(1);
 }
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 cpSync(CLIENT, OUT, { recursive: true });
-for (const f of ["dist/sw.js", ...readdirSync("dist").filter((f) => /^workbox-.*\.js$/.test(f)).map((f) => `dist/${f}`)]) {
-  if (existsSync(f)) cpSync(f, join(OUT, f.replace(/^dist\//, "")));
+
+for (const f of readdirSync("dist")) {
+  if (f === "sw.js" || /^workbox-.*\.js$/.test(f)) cpSync(join("dist", f), join(OUT, f));
 }
 
-const html = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#059669" />
-    <title>Kandahar Market Rates</title>
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" href="/icon-512.png" type="image/png" />
-    <link rel="apple-touch-icon" href="/icon-512.png" />
-    ${css ? `<link rel="stylesheet" href="/assets/${css}" />` : ""}
-  </head>
-  <body>
-    <script type="module" src="/assets/${entry}"></script>
-  </body>
-</html>
-`;
-writeFileSync(join(OUT, "index.html"), html);
-
 writeFileSync(
-  join(OUT, "..", "capacitor.config.json"),
+  "dist/capacitor.config.json",
   JSON.stringify(
     {
       appId: "com.kandahar.rates",
@@ -63,5 +39,5 @@ writeFileSync(
   ),
 );
 
-execSync(`cd dist && zip -qr ../kandahar-rates-offline.zip offline-app capacitor.config.json`);
+execSync("cd dist && zip -qr ../kandahar-rates-offline.zip offline-app capacitor.config.json");
 console.log("Created kandahar-rates-offline.zip");
