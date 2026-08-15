@@ -1,5 +1,21 @@
 import { queryOptions } from "@tanstack/react-query";
 import { getRates, type RateRow } from "@/lib/rates.functions";
+import { supabase } from "@/integrations/supabase/client";
+
+// Direct database read used when the server function is unreachable
+// (e.g. the packaged offline/APK build served from a local file origin).
+async function fetchRatesDirect(): Promise<RateRow[]> {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("rates")
+    .select("id,pair,buy,sell,recorded_at,recorded_date")
+    .gte("recorded_date", since)
+    .order("recorded_at", { ascending: false })
+    .limit(1000);
+  if (error) throw error;
+  return (data ?? []) as RateRow[];
+}
+
 
 const CACHE_KEY = "km_rates_cache_v1";
 const CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
@@ -54,7 +70,19 @@ export const ratesQuery = queryOptions<RatesQueryResult>({
         return { rates: cached.rates, error: null, fromCache: true, cachedAt: cached.cachedAt };
       }
       return { rates: res.rates, error: res.error };
-    } catch (err) {
+    } catch {
+      // Server function unreachable — try the database directly (packaged app).
+      if (typeof window !== "undefined") {
+        try {
+          const rows = await fetchRatesDirect();
+          if (rows.length > 0) {
+            writeCache(rows);
+            return { rates: rows, error: null };
+          }
+        } catch {
+          /* offline — fall through to cache */
+        }
+      }
       const cached = readCache();
       if (cached) {
         return {
@@ -64,8 +92,9 @@ export const ratesQuery = queryOptions<RatesQueryResult>({
           cachedAt: cached.cachedAt,
         };
       }
-      throw err;
+      return { rates: [], error: null };
     }
+
   },
   staleTime: 60_000,
   // Serve cached data immediately while a fresh fetch happens in the background.

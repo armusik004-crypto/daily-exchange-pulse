@@ -6,10 +6,19 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
 
+const OFFLINE = process.env.OFFLINE_APP === "1";
+
 export default defineConfig({
-  tanstackStart: {
-    server: { entry: "server" },
-  },
+  // Offline/APK build only (OFFLINE_APP=1): prerender a static SPA shell
+  // (dist/client/index.html) that Capacitor can bundle for offline use.
+  ...(OFFLINE ? { nitro: false as const } : {}),
+  tanstackStart: OFFLINE
+    ? { spa: { enabled: true, prerender: { outputPath: "/index.html" } } }
+    : { server: { entry: "server" } },
+
+
+
+
   vite: {
     plugins: [
       VitePWA({
