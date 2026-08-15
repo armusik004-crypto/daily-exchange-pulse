@@ -146,13 +146,17 @@ function HomePage() {
   const router = useRouter()
   const navigate = useNavigate()
   const { data } = useSuspenseQuery(ratesQuery)
-  const grouped = useMemo(() => groupByPair(data.rates), [data.rates])
-  const [refreshing, setRefreshing] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
+  // Cached (localStorage) rates only exist on the client — render them after
+  // hydration so the first client paint matches the server HTML.
+  const rates = mounted || !data.fromCache ? data.rates : []
+  const grouped = useMemo(() => groupByPair(rates), [rates])
+  const [refreshing, setRefreshing] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const { t, dir } = useI18n()
-  const ago = useTimeAgo(data.rates[0]?.recorded_at)
+  const ago = useTimeAgo(mounted ? rates[0]?.recorded_at : undefined)
+
 
   const latestIds = useMemo(
     () =>
@@ -210,7 +214,7 @@ function HomePage() {
     }
   }
 
-  const hasData = data.rates.length > 0
+  const hasData = rates.length > 0
 
   return (
     <div dir={dir} className="min-h-screen bg-gradient-to-b from-emerald-50/60 via-background to-background dark:from-emerald-950/20">
