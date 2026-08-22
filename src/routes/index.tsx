@@ -194,13 +194,26 @@ function HomePage() {
     staleTime: 60_000,
   })
 
+  const [refreshMsg, setRefreshMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
   const triggerRefresh = async () => {
     setRefreshing(true)
+    setRefreshMsg(null)
     try {
-      await fetch('/api/public/cron/refresh-rates', { method: 'POST' })
+      const res = await fetch(apiUrl('/api/public/cron/refresh-rates'), { method: 'POST' })
+      const json = (await res.json().catch(() => null)) as { ok?: boolean } | null
+      await queryClient.invalidateQueries({ queryKey: ['rates'] })
       await router.invalidate()
+      setRefreshMsg(
+        res.ok && json?.ok
+          ? { ok: true, text: t('refreshed_ok') }
+          : { ok: false, text: t('refresh_failed') },
+      )
+    } catch {
+      setRefreshMsg({ ok: false, text: t('refresh_failed') })
     } finally {
       setRefreshing(false)
+      setTimeout(() => setRefreshMsg(null), 4000)
     }
   }
 
@@ -215,6 +228,7 @@ function HomePage() {
   }
 
   const hasData = rates.length > 0
+
 
   return (
     <div dir={dir} className="min-h-screen bg-gradient-to-b from-emerald-50/60 via-background to-background dark:from-emerald-950/20">
