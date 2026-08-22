@@ -288,7 +288,20 @@ function HomePage() {
         {mounted && data.fromCache && (
           <div className="flex items-center justify-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
             <WifiOff className="h-3.5 w-3.5" />
-            Showing cached rates — reconnecting…
+            {t('cached_notice')}
+          </div>
+        )}
+        {refreshMsg && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`rounded-md px-3 py-2 text-center text-xs font-medium ${
+              refreshMsg.ok
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                : 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
+            }`}
+          >
+            {refreshMsg.text}
           </div>
         )}
         {ago && (
@@ -313,11 +326,17 @@ function HomePage() {
 
         {!hasData ? (
           <Card className="p-8 text-center">
-            <p className="text-sm text-muted-foreground mb-4">{t('no_data')}</p>
-            <Button onClick={triggerRefresh} disabled={refreshing} className="gap-2">
+            <p className="text-sm font-semibold text-foreground mb-1">
+              {data.error ? t('error_title') : t('no_data')}
+            </p>
+            {data.error && (
+              <p className="text-xs text-muted-foreground mb-4">{t('error_body')}</p>
+            )}
+            <Button onClick={triggerRefresh} disabled={refreshing} className="gap-2 mt-3">
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {t('load_rates')}
+              {refreshing ? t('loading_rates') : data.error ? t('retry') : t('load_rates')}
             </Button>
+
           </Card>
         ) : (
           <section className="grid gap-3">
