@@ -51,7 +51,17 @@ const en: Dict = {
   pair_USD_PKR: "US Dollar → Pakistani Kaldar",
   pair_AFN_PKR: "Afghani → Pakistani Kaldar",
   back: "Back",
+  cached_notice: "Showing saved rates — no connection to the rate service.",
+  error_title: "Rates could not be loaded",
+  error_body: "The rate service is unreachable right now. No rates are shown rather than wrong ones.",
+  retry: "Try again",
+  refreshed_ok: "Rates updated",
+  refresh_failed: "Could not reach the rate service. Please try again.",
+  loading_rates: "Loading rates…",
+  ai_error: "The assistant is unavailable right now. Please try again.",
+  no_rate_available: "Rate not available",
 };
+
 
 const ps: Dict = {
   app_title: "د کندهار د بازار نرخونه",
@@ -100,7 +110,17 @@ const ps: Dict = {
   pair_USD_PKR: "امریکایي ډالر → پاکستانۍ کلداره",
   pair_AFN_PKR: "افغانۍ → پاکستانۍ کلداره",
   back: "بېرته",
+  cached_notice: "ساتل شوي نرخونه ښکاري — د نرخ خدمت سره اړیکه نشته.",
+  error_title: "نرخونه رانه‌وستل شول",
+  error_body: "د نرخونو سرچینه اوس نشته. د غلطو نرخونو پر ځای هېڅ نه ښودل کیږي.",
+  retry: "بیا هڅه وکړئ",
+  refreshed_ok: "نرخونه تازه شول",
+  refresh_failed: "د نرخونو سرچینې ته لاسرسی ونشو. بیا هڅه وکړئ.",
+  loading_rates: "نرخونه راځي…",
+  ai_error: "مرستندویه اوس نشته. بیا هڅه وکړئ.",
+  no_rate_available: "نرخ نشته",
 };
+
 
 const fa: Dict = {
   app_title: "نرخ‌های بازار قندهار",
@@ -149,7 +169,17 @@ const fa: Dict = {
   pair_USD_PKR: "دالر امریکایی → کلدار پاکستانی",
   pair_AFN_PKR: "افغانی → کلدار پاکستانی",
   back: "بازگشت",
+  cached_notice: "نرخ‌های ذخیره‌شده نمایش داده می‌شود — ارتباط با سرویس نرخ برقرار نیست.",
+  error_title: "نرخ‌ها بارگیری نشد",
+  error_body: "سرویس نرخ‌ها در دسترس نیست. به جای نرخ نادرست، چیزی نشان داده نمی‌شود.",
+  retry: "تلاش دوباره",
+  refreshed_ok: "نرخ‌ها به‌روز شد",
+  refresh_failed: "دسترسی به سرویس نرخ ممکن نشد. دوباره تلاش کنید.",
+  loading_rates: "در حال بارگیری نرخ‌ها…",
+  ai_error: "دستیار در حال حاضر در دسترس نیست. دوباره تلاش کنید.",
+  no_rate_available: "نرخ موجود نیست",
 };
+
 
 const DICTS: Record<Lang, Dict> = { en, ps, fa };
 

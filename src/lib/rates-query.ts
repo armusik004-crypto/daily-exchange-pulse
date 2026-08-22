@@ -58,44 +58,45 @@ export type RatesQueryResult = {
 export const ratesQuery = queryOptions<RatesQueryResult>({
   queryKey: ["rates"],
   queryFn: async () => {
+    let serverError: string | null = null;
     try {
       const res = await getRates();
       if (res.rates.length > 0) {
         writeCache(res.rates);
-        return { rates: res.rates, error: res.error };
+        return { rates: res.rates, error: null };
       }
-      // Empty from server — prefer cache if available.
-      const cached = readCache();
-      if (cached) {
-        return { rates: cached.rates, error: null, fromCache: true, cachedAt: cached.cachedAt };
-      }
-      return { rates: res.rates, error: res.error };
-    } catch {
-      // Server function unreachable — try the database directly (packaged app).
-      if (typeof window !== "undefined") {
-        try {
-          const rows = await fetchRatesDirect();
-          if (rows.length > 0) {
-            writeCache(rows);
-            return { rates: rows, error: null };
-          }
-        } catch {
-          /* offline — fall through to cache */
-        }
-      }
-      const cached = readCache();
-      if (cached) {
-        return {
-          rates: cached.rates,
-          error: null,
-          fromCache: true,
-          cachedAt: cached.cachedAt,
-        };
-      }
-      return { rates: [], error: null };
+      serverError = res.error;
+    } catch (err) {
+      serverError = err instanceof Error ? err.message : "network_error";
     }
 
+    // Server function empty/unreachable — try the database directly
+    // (packaged offline/APK build, or a transient server issue).
+    if (typeof window !== "undefined") {
+      try {
+        const rows = await fetchRatesDirect();
+        if (rows.length > 0) {
+          writeCache(rows);
+          return { rates: rows, error: null };
+        }
+      } catch (err) {
+        serverError = err instanceof Error ? err.message : serverError;
+      }
+    }
+
+    // Last resort: cached rates, clearly marked as cached. Never fabricate.
+    const cached = readCache();
+    if (cached) {
+      return {
+        rates: cached.rates,
+        error: null,
+        fromCache: true,
+        cachedAt: cached.cachedAt,
+      };
+    }
+    return { rates: [], error: serverError ?? "unavailable" };
   },
+
   staleTime: 60_000,
   // Serve cached data immediately while a fresh fetch happens in the background.
   initialData: () => {
