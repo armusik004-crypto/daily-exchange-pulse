@@ -147,6 +147,8 @@ function useCopy() {
 function HomePage() {
   const router = useRouter()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
   const { data } = useSuspenseQuery(ratesQuery)
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
