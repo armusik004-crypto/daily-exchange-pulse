@@ -6,6 +6,8 @@ import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { type RateRow } from '@/lib/rates.functions'
 import { ratesQuery } from '@/lib/rates-query'
 import { trendProbability } from '@/lib/analytics'
+import { apiUrl } from '@/lib/api-base'
+
 import { useEngagement } from '@/lib/use-engagement'
 import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
