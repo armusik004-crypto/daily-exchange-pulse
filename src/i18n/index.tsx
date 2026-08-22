@@ -51,7 +51,17 @@ const en: Dict = {
   pair_USD_PKR: "US Dollar → Pakistani Kaldar",
   pair_AFN_PKR: "Afghani → Pakistani Kaldar",
   back: "Back",
+  cached_notice: "Showing saved rates — no connection to the rate service.",
+  error_title: "Rates could not be loaded",
+  error_body: "The rate service is unreachable right now. No rates are shown rather than wrong ones.",
+  retry: "Try again",
+  refreshed_ok: "Rates updated",
+  refresh_failed: "Could not reach the rate service. Please try again.",
+  loading_rates: "Loading rates…",
+  ai_error: "The assistant is unavailable right now. Please try again.",
+  no_rate_available: "Rate not available",
 };
+
 
 const ps: Dict = {
   app_title: "د کندهار د بازار نرخونه",
