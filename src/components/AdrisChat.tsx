@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n";
+import { apiUrl } from "@/lib/api-base";
 
 export function AdrisChat() {
   const { t, lang, dir } = useI18n();
@@ -12,13 +13,13 @@ export function AdrisChat() {
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: "/api/chat",
+        api: apiUrl("/api/chat"),
         body: () => ({ lang }),
       }),
     [lang],
   );
 
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, error } = useChat({
     id: "adris-chat",
     transport,
   });
@@ -92,6 +93,7 @@ export function AdrisChat() {
             {busy && (
               <div className="text-xs text-muted-foreground animate-pulse">Thinking…</div>
             )}
+            {error && <div className="text-xs text-rose-600">{t("ai_error")}</div>}
           </div>
 
           <form onSubmit={submit} className="border-t border-border p-2 flex gap-2">

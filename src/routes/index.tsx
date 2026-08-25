@@ -165,7 +165,7 @@ function HomePage() {
   const latestIds = useMemo(
     () =>
       PAIRS.map((p) => grouped.get(p.key)?.[0]?.id)
-        .filter((id): id is number => typeof id === 'number')
+        .filter((id): id is number => typeof id === 'number' && id > 0)
         .sort((a, b) => a - b),
     [grouped],
   )
@@ -544,7 +544,13 @@ function Converter({ grouped }: { grouped: Map<string, RateRow[]> }) {
       AFN_PKR: afnPkr,
       PKR_AFN: afnPkr ? 1 / afnPkr : null,
     }
-    return direct[`${from}_${to}`] ?? null
+    const directRate = direct[`${from}_${to}`]
+    if (directRate) return directRate
+    if (usdAfn && usdPkr) {
+      if (from === 'AFN' && to === 'PKR') return usdPkr / usdAfn
+      if (from === 'PKR' && to === 'AFN') return usdAfn / usdPkr
+    }
+    return null
   }, [from, to, grouped])
 
   const value = parseFloat(amount)
