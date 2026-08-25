@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChartPairRouteImport } from './routes/chart.$pair'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiAdminChatRouteImport } from './routes/api/admin-chat'
+import { Route as ApiPublicRatesRouteImport } from './routes/api/public/rates'
 import { Route as ApiPublicCronRefreshRatesRouteImport } from './routes/api/public/cron/refresh-rates'
 
 const AuthRoute = AuthRouteImport.update({
@@ -41,6 +42,11 @@ const ApiAdminChatRoute = ApiAdminChatRouteImport.update({
   path: '/api/admin-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicRatesRoute = ApiPublicRatesRouteImport.update({
+  id: '/api/public/rates',
+  path: '/api/public/rates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronRefreshRatesRoute =
   ApiPublicCronRefreshRatesRouteImport.update({
     id: '/api/public/cron/refresh-rates',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/api/admin-chat': typeof ApiAdminChatRoute
   '/api/chat': typeof ApiChatRoute
   '/chart/$pair': typeof ChartPairRoute
+  '/api/public/rates': typeof ApiPublicRatesRoute
   '/api/public/cron/refresh-rates': typeof ApiPublicCronRefreshRatesRoute
 }
 export interface FileRoutesByTo {
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/api/admin-chat': typeof ApiAdminChatRoute
   '/api/chat': typeof ApiChatRoute
   '/chart/$pair': typeof ChartPairRoute
+  '/api/public/rates': typeof ApiPublicRatesRoute
   '/api/public/cron/refresh-rates': typeof ApiPublicCronRefreshRatesRoute
 }
 export interface FileRoutesById {
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/api/admin-chat': typeof ApiAdminChatRoute
   '/api/chat': typeof ApiChatRoute
   '/chart/$pair': typeof ChartPairRoute
+  '/api/public/rates': typeof ApiPublicRatesRoute
   '/api/public/cron/refresh-rates': typeof ApiPublicCronRefreshRatesRoute
 }
 export interface FileRouteTypes {
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/api/admin-chat'
     | '/api/chat'
     | '/chart/$pair'
+    | '/api/public/rates'
     | '/api/public/cron/refresh-rates'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/api/admin-chat'
     | '/api/chat'
     | '/chart/$pair'
+    | '/api/public/rates'
     | '/api/public/cron/refresh-rates'
   id:
     | '__root__'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/api/admin-chat'
     | '/api/chat'
     | '/chart/$pair'
+    | '/api/public/rates'
     | '/api/public/cron/refresh-rates'
   fileRoutesById: FileRoutesById
 }
@@ -106,6 +118,7 @@ export interface RootRouteChildren {
   ApiAdminChatRoute: typeof ApiAdminChatRoute
   ApiChatRoute: typeof ApiChatRoute
   ChartPairRoute: typeof ChartPairRoute
+  ApiPublicRatesRoute: typeof ApiPublicRatesRoute
   ApiPublicCronRefreshRatesRoute: typeof ApiPublicCronRefreshRatesRoute
 }
 
@@ -146,6 +159,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/rates': {
+      id: '/api/public/rates'
+      path: '/api/public/rates'
+      fullPath: '/api/public/rates'
+      preLoaderRoute: typeof ApiPublicRatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/refresh-rates': {
       id: '/api/public/cron/refresh-rates'
       path: '/api/public/cron/refresh-rates'
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminChatRoute: ApiAdminChatRoute,
   ApiChatRoute: ApiChatRoute,
   ChartPairRoute: ChartPairRoute,
+  ApiPublicRatesRoute: ApiPublicRatesRoute,
   ApiPublicCronRefreshRatesRoute: ApiPublicCronRefreshRatesRoute,
 }
 export const routeTree = rootRouteImport
