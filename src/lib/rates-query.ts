@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { getRates, type RateRow } from "@/lib/rates.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { apiUrl, IS_PACKAGED_APP } from "@/lib/api-base";
 
 // Direct database read used when the server function is unreachable
 // (e.g. the packaged offline/APK build served from a local file origin).
@@ -60,7 +61,9 @@ export const ratesQuery = queryOptions<RatesQueryResult>({
   queryFn: async () => {
     let serverError: string | null = null;
     try {
-      const res = await getRates();
+      const res = IS_PACKAGED_APP
+        ? ((await fetch(apiUrl("/api/public/rates"), { cache: "no-store" }).then((r) => r.json())) as RatesQueryResult)
+        : await getRates();
       if (res.rates.length > 0) {
         writeCache(res.rates);
         return { rates: res.rates, error: null };
@@ -70,9 +73,9 @@ export const ratesQuery = queryOptions<RatesQueryResult>({
       serverError = err instanceof Error ? err.message : "network_error";
     }
 
-    // Server function empty/unreachable — try the database directly
-    // (packaged offline/APK build, or a transient server issue).
-    if (typeof window !== "undefined") {
+    // Server route empty/unreachable in APK mode — try the database directly.
+    // On the web build, skipping this avoids slow duplicate failed requests.
+    if (typeof window !== "undefined" && IS_PACKAGED_APP) {
       try {
         const rows = await fetchRatesDirect();
         if (rows.length > 0) {

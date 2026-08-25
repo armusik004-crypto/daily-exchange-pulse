@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, Send, X, ImagePlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { apiUrl } from "@/lib/api-base";
 
 type Attachment = { dataUrl: string; name: string };
 type Msg = { role: "user" | "assistant"; text: string; images?: string[] };
@@ -76,7 +77,7 @@ export function AdminChat() {
         return { role: "user", content: parts };
       });
 
-      const res = await fetch("/api/admin-chat", {
+      const res = await fetch(apiUrl("/api/admin-chat"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

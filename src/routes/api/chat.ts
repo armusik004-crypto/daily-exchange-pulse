@@ -1,8 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createClient } from '@supabase/supabase-js'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { streamText, convertToModelMessages, type UIMessage } from 'ai'
-import type { Database } from '@/integrations/supabase/types'
 import { toOHLC, trendProbability } from '@/lib/analytics'
 import type { RateRow } from '@/lib/rates.functions'
 
@@ -18,21 +16,11 @@ export const Route = createFileRoute('/api/chat')({
         const apiKey = process.env.LOVABLE_API_KEY
         if (!apiKey) return new Response('Missing LOVABLE_API_KEY', { status: 500 })
 
-        // Load latest snapshot for grounding
-        const supabase = createClient<Database>(
-          process.env.SUPABASE_URL!,
-          process.env.SUPABASE_PUBLISHABLE_KEY!,
-          { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-        )
-        const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-        const { data } = await supabase
-          .from('rates')
-          .select('pair,buy,sell,recorded_at,recorded_date')
-          .gte('recorded_date', since)
-          .order('recorded_at', { ascending: false })
-          .limit(500)
-
-        const rows = (data ?? []) as RateRow[]
+        // Load the app's rate snapshot. It falls back to the live Kandahar source
+        // when the hosted database is paused or stale, so AI never guesses rates.
+        const { getRatesForApp } = await import('@/lib/rates.server')
+        const { rates } = await getRatesForApp()
+        const rows = rates as RateRow[]
         const byPair = new Map<string, RateRow[]>()
         for (const r of rows) {
           const list = byPair.get(r.pair) ?? []
