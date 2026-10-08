@@ -9,27 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ChartPairRouteImport } from './routes/chart.$pair'
-import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApiAdminChatRouteImport } from './routes/api/admin-chat'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ChartPairRouteImport } from './routes/chart.$pair'
 import { Route as ApiPublicRatesRouteImport } from './routes/api/public/rates'
 import { Route as ApiPublicCronRefreshRatesRouteImport } from './routes/api/public/cron/refresh-rates'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ChartPairRoute = ChartPairRouteImport.update({
-  id: '/chart/$pair',
-  path: '/chart/$pair',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminChatRoute = ApiAdminChatRouteImport.update({
+  id: '/api/admin-chat',
+  path: '/api/admin-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -37,9 +37,9 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAdminChatRoute = ApiAdminChatRouteImport.update({
-  id: '/api/admin-chat',
-  path: '/api/admin-chat',
+const ChartPairRoute = ChartPairRouteImport.update({
+  id: '/chart/$pair',
+  path: '/chart/$pair',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicRatesRoute = ApiPublicRatesRouteImport.update({
@@ -124,13 +124,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -138,11 +131,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/chart/$pair': {
-      id: '/chart/$pair'
-      path: '/chart/$pair'
-      fullPath: '/chart/$pair'
-      preLoaderRoute: typeof ChartPairRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin-chat': {
+      id: '/api/admin-chat'
+      path: '/api/admin-chat'
+      fullPath: '/api/admin-chat'
+      preLoaderRoute: typeof ApiAdminChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -152,11 +152,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/admin-chat': {
-      id: '/api/admin-chat'
-      path: '/api/admin-chat'
-      fullPath: '/api/admin-chat'
-      preLoaderRoute: typeof ApiAdminChatRouteImport
+    '/chart/$pair': {
+      id: '/chart/$pair'
+      path: '/chart/$pair'
+      fullPath: '/chart/$pair'
+      preLoaderRoute: typeof ChartPairRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/rates': {
