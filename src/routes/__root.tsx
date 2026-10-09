@@ -8,28 +8,24 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { I18nProvider } from "../i18n";
-import { AdrisChat } from "../components/AdrisChat";
 import { registerServiceWorker } from "../lib/register-sw";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
+        <h1 className="text-7xl font-bold text-foreground">۴۰۴</h1>
+        <p className="mt-2 text-sm text-muted-foreground">دا پاڼه شتون نه لري.</p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            کور ته
           </Link>
         </div>
       </div>
@@ -48,10 +44,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          پاڼه ونه خلاصه شوه
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          یوه ستونزه رامنځته شوه. بیا هڅه وکړئ.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -61,14 +57,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            بیا هڅه
           </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Go home
-          </a>
         </div>
       </div>
     </div>
@@ -80,18 +70,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#059669" },
+      { name: "theme-color", content: "#101a33" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "KM Rates" },
-      { title: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
-      { name: "description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, candlestick charts and Adris AI assistant." },
-      { property: "og:title", content: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
-      { property: "og:description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, updated hourly." },
+      { name: "apple-mobile-web-app-title", content: "Adris AI" },
+      { title: "Adris AI — ستاسو پښتو ویاند مرستیال" },
+      { name: "description", content: "Adris AI — په پښتو ژبه ځوابونکي مصنوعي ځیرکتیا. خبرې اترې، عکس جوړول، کوډ او زده کړه. جوړونکی: ادریس روحاني." },
+      { property: "og:title", content: "Adris AI — ستاسو پښتو ویاند مرستیال" },
+      { property: "og:description", content: "په پښتو ژبه ځوابونکي مصنوعي ځیرکتیا — خبرې اترې، عکس جوړول، کوډ او زده کړه." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "Kandahar Market Rates — Live USD, PKR & AFN Today" },
-      { name: "twitter:description", content: "Live and accurate Kandahar money-market exchange rates — Dollar, Pakistani Kaldar and Afghani buy & sell prices, updated hourly." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -108,7 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ps" dir="rtl">
       <head>
         <HeadContent />
       </head>
@@ -129,10 +117,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <I18nProvider>
-        <Outlet />
-        <AdrisChat />
-      </I18nProvider>
+      <Outlet />
+      <Toaster position="top-center" theme="dark" dir="rtl" />
     </QueryClientProvider>
   );
 }
