@@ -9,27 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ChartPairRouteImport } from './routes/chart.$pair'
+import { Route as ApiImageRouteImport } from './routes/api/image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
-import { Route as ApiAdminChatRouteImport } from './routes/api/admin-chat'
-import { Route as ApiPublicRatesRouteImport } from './routes/api/public/rates'
-import { Route as ApiPublicCronRefreshRatesRouteImport } from './routes/api/public/cron/refresh-rates'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ChartPairRoute = ChartPairRouteImport.update({
-  id: '/chart/$pair',
-  path: '/chart/$pair',
+const ApiImageRoute = ApiImageRouteImport.update({
+  id: '/api/image',
+  path: '/api/image',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -37,100 +28,39 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAdminChatRoute = ApiAdminChatRouteImport.update({
-  id: '/api/admin-chat',
-  path: '/api/admin-chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicRatesRoute = ApiPublicRatesRouteImport.update({
-  id: '/api/public/rates',
-  path: '/api/public/rates',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCronRefreshRatesRoute =
-  ApiPublicCronRefreshRatesRouteImport.update({
-    id: '/api/public/cron/refresh-rates',
-    path: '/api/public/cron/refresh-rates',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
-  '/api/admin-chat': typeof ApiAdminChatRoute
   '/api/chat': typeof ApiChatRoute
-  '/chart/$pair': typeof ChartPairRoute
-  '/api/public/rates': typeof ApiPublicRatesRoute
-  '/api/public/cron/refresh-rates': typeof ApiPublicCronRefreshRatesRoute
+  '/api/image': typeof ApiImageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
-  '/api/admin-chat': typeof ApiAdminChatRoute
   '/api/chat': typeof ApiChatRoute
-  '/chart/$pair': typeof ChartPairRoute
-  '/api/public/rates': typeof ApiPublicRatesRoute
-  '/api/public/cron/refresh-rates': typeof ApiPublicCronRefreshRatesRoute
+  '/api/image': typeof ApiImageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
-  '/api/admin-chat': typeof ApiAdminChatRoute
   '/api/chat': typeof ApiChatRoute
-  '/chart/$pair': typeof ChartPairRoute
-  '/api/public/rates': typeof ApiPublicRatesRoute
-  '/api/public/cron/refresh-rates': typeof ApiPublicCronRefreshRatesRoute
+  '/api/image': typeof ApiImageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/auth'
-    | '/api/admin-chat'
-    | '/api/chat'
-    | '/chart/$pair'
-    | '/api/public/rates'
-    | '/api/public/cron/refresh-rates'
+  fullPaths: '/' | '/api/chat' | '/api/image'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/auth'
-    | '/api/admin-chat'
-    | '/api/chat'
-    | '/chart/$pair'
-    | '/api/public/rates'
-    | '/api/public/cron/refresh-rates'
-  id:
-    | '__root__'
-    | '/'
-    | '/auth'
-    | '/api/admin-chat'
-    | '/api/chat'
-    | '/chart/$pair'
-    | '/api/public/rates'
-    | '/api/public/cron/refresh-rates'
+  to: '/' | '/api/chat' | '/api/image'
+  id: '__root__' | '/' | '/api/chat' | '/api/image'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthRoute: typeof AuthRoute
-  ApiAdminChatRoute: typeof ApiAdminChatRoute
   ApiChatRoute: typeof ApiChatRoute
-  ChartPairRoute: typeof ChartPairRoute
-  ApiPublicRatesRoute: typeof ApiPublicRatesRoute
-  ApiPublicCronRefreshRatesRoute: typeof ApiPublicCronRefreshRatesRoute
+  ApiImageRoute: typeof ApiImageRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -138,11 +68,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/chart/$pair': {
-      id: '/chart/$pair'
-      path: '/chart/$pair'
-      fullPath: '/chart/$pair'
-      preLoaderRoute: typeof ChartPairRouteImport
+    '/api/image': {
+      id: '/api/image'
+      path: '/api/image'
+      fullPath: '/api/image'
+      preLoaderRoute: typeof ApiImageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -152,38 +82,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/admin-chat': {
-      id: '/api/admin-chat'
-      path: '/api/admin-chat'
-      fullPath: '/api/admin-chat'
-      preLoaderRoute: typeof ApiAdminChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/rates': {
-      id: '/api/public/rates'
-      path: '/api/public/rates'
-      fullPath: '/api/public/rates'
-      preLoaderRoute: typeof ApiPublicRatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cron/refresh-rates': {
-      id: '/api/public/cron/refresh-rates'
-      path: '/api/public/cron/refresh-rates'
-      fullPath: '/api/public/cron/refresh-rates'
-      preLoaderRoute: typeof ApiPublicCronRefreshRatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthRoute: AuthRoute,
-  ApiAdminChatRoute: ApiAdminChatRoute,
   ApiChatRoute: ApiChatRoute,
-  ChartPairRoute: ChartPairRoute,
-  ApiPublicRatesRoute: ApiPublicRatesRoute,
-  ApiPublicCronRefreshRatesRoute: ApiPublicCronRefreshRatesRoute,
+  ApiImageRoute: ApiImageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

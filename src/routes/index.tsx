@@ -1,619 +1,613 @@
-import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSuspenseQuery, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, RefreshCw, BarChart3, LogOut, ShieldCheck, WifiOff, Eye, Heart, Clock, Copy, Check, Sparkles } from 'lucide-react'
-import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { type RateRow } from '@/lib/rates.functions'
-import { ratesQuery } from '@/lib/rates-query'
-import { trendProbability } from '@/lib/analytics'
-import { apiUrl } from '@/lib/api-base'
-
-import { useEngagement } from '@/lib/use-engagement'
-import { supabase } from '@/integrations/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { LanguageMenu } from '@/components/LanguageMenu'
-import { AdminChat } from '@/components/AdminChat'
-import { useI18n } from '@/i18n'
+  MessageCircle,
+  ImagePlus,
+  Code2,
+  GraduationCap,
+  Send,
+  Paperclip,
+  Camera,
+  Plus,
+  Menu,
+  X,
+  LogOut,
+  Trash2,
+  Sparkles,
+  Loader2,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
-export const Route = createFileRoute('/')({
-  loader: ({ context }) => context.queryClient.ensureQueryData(ratesQuery),
-  component: HomePage,
-})
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Adris AI — ستاسو پښتو ویاند مرستیال" },
+      { name: "description", content: "Adris AI — په پښتو ژبه ځوابونکي مصنوعي ځیرکتیا. خبرې اترې، عکس جوړول، کوډ او زده کړه. جوړونکی: ادریس روحاني." },
+      { property: "og:title", content: "Adris AI — ستاسو پښتو ویاند مرستیال" },
+      { property: "og:description", content: "په پښتو ژبه ځوابونکي مصنوعي ځیرکتیا — خبرې اترې، عکس جوړول، کوډ او زده کړه." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: AdrisApp,
+});
 
-type PairKey = 'USD_AFN' | 'USD_PKR' | 'AFN_PKR'
+type Msg = {
+  id?: string;
+  role: "user" | "assistant";
+  content: string;
+  image?: string; // data URL (user attachment or generated image)
+};
 
-const PAIRS: { key: PairKey; fromFlag: string; toFlag: string }[] = [
-  { key: 'USD_AFN', fromFlag: '🇺🇸', toFlag: '🇦🇫' },
-  { key: 'USD_PKR', fromFlag: '🇺🇸', toFlag: '🇵🇰' },
-  { key: 'AFN_PKR', fromFlag: '🇦🇫', toFlag: '🇵🇰' },
-]
+type Conversation = { id: string; title: string; created_at: string };
 
-function groupByPair(rows: RateRow[]) {
-  const map = new Map<string, RateRow[]>()
-  for (const r of rows) {
-    const list = map.get(r.pair) ?? []
-    list.push(r)
-    map.set(r.pair, list)
-  }
-  for (const list of map.values()) {
-    list.sort((a, b) => +new Date(b.recorded_at) - +new Date(a.recorded_at))
-  }
-  return map
+function StarLogo({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" className="adris-star" aria-hidden>
+      <path
+        d="M24 2 L28.5 19.5 L46 24 L28.5 28.5 L24 46 L19.5 28.5 L2 24 L19.5 19.5 Z"
+        fill="url(#adrisGrad)"
+      />
+      <defs>
+        <linearGradient id="adrisGrad" x1="0" y1="0" x2="48" y2="48">
+          <stop offset="0%" stopColor="#7dd3fc" />
+          <stop offset="50%" stopColor="#818cf8" />
+          <stop offset="100%" stopColor="#c084fc" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
 }
 
-function formatNum(n: number) {
-  if (n >= 100) return n.toFixed(2)
-  if (n >= 10) return n.toFixed(2)
-  return n.toFixed(3)
-}
+const QUICK_CARDS = [
+  { icon: MessageCircle, title: "خبرې اترې", desc: "له ما سره په پښتو وغږېږئ", prompt: "سلام! ته څه کولای شې؟" },
+  { icon: ImagePlus, title: "عکس جوړول", desc: "خپل تصور عکس ته واړوئ", prompt: "__IMAGE_MODE__" },
+  { icon: Code2, title: "کوډ", desc: "پروګرامینګ مرسته", prompt: "ما سره د پایتون په زده کړe کې مرسته وکړه" },
+  { icon: GraduationCap, title: "زده کړه", desc: "نوي شیان زده کړئ", prompt: "د مصنوعي ځیرکتیا په اړه راته وښيه" },
+];
 
-function formatKabulTime(iso: string) {
-  try {
-    return new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Kabul',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      day: '2-digit',
-      month: 'short',
-    }).format(new Date(iso))
-  } catch {
-    return ''
-  }
-}
+function AdrisApp() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const [input, setInput] = useState("");
+  const [attachment, setAttachment] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [imageMode, setImageMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
-function useTimeAgo(iso?: string) {
-  // Only render on client to avoid hydration mismatch.
-  const [now, setNow] = useState<number | null>(null)
   useEffect(() => {
-    setNow(Date.now())
-    const t = setInterval(() => setNow(Date.now()), 60_000)
-    return () => clearInterval(t)
-  }, [])
-  if (!iso || now === null) return null
-  const diff = now - +new Date(iso)
-  const m = Math.floor(diff / 60_000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
-}
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+      setAuthReady(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
-const SEEN_KEY = 'km_seen_rates_v1'
-
-/** Marks pairs whose newest post the user has not seen yet. */
-function useUnseen(latest: { pair: string; at: string }[]) {
-  const [seen, setSeen] = useState<Record<string, string> | null>(null)
-  const sig = latest.map((l) => `${l.pair}:${l.at}`).join('|')
+  const loadConversations = useCallback(async () => {
+    const { data } = await supabase
+      .from("conversations")
+      .select("id, title, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (data) setConversations(data as Conversation[]);
+  }, []);
 
   useEffect(() => {
-    try {
-      setSeen(JSON.parse(localStorage.getItem(SEEN_KEY) ?? '{}'))
-    } catch {
-      setSeen({})
-    }
-  }, [])
+    if (user) loadConversations();
+  }, [user, loadConversations]);
 
-  const unseen = useMemo(() => {
-    if (!seen) return new Set<string>()
-    const s = new Set<string>()
-    for (const l of latest) if (seen[l.pair] !== l.at) s.add(l.pair)
-    return s
-  }, [seen, sig]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, busy]);
 
-  const markSeen = useCallback(() => {
-    const next: Record<string, string> = {}
-    for (const l of latest) next[l.pair] = l.at
-    try {
-      localStorage.setItem(SEEN_KEY, JSON.stringify(next))
-    } catch {
-      /* ignore */
-    }
-    setSeen(next)
-  }, [sig]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  return { unseen, markSeen }
-}
-
-function useCopy() {
-  const [copied, setCopied] = useState<string | null>(null)
-  const copy = useCallback(async (key: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-    } catch {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      ta.remove()
-    }
-    setCopied(key)
-    setTimeout(() => setCopied((c) => (c === key ? null : c)), 1800)
-  }, [])
-  return { copied, copy }
-}
-
-function HomePage() {
-  const router = useRouter()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-
-  const { data } = useSuspenseQuery(ratesQuery)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  // Cached (localStorage) rates only exist on the client — render them after
-  // hydration so the first client paint matches the server HTML.
-  const rates = mounted || !data.fromCache ? data.rates : []
-  const grouped = useMemo(() => groupByPair(rates), [rates])
-  const [refreshing, setRefreshing] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
-  const { t, dir } = useI18n()
-  const ago = useTimeAgo(mounted ? rates[0]?.recorded_at : undefined)
-
-
-  const latestIds = useMemo(
-    () =>
-      PAIRS.map((p) => grouped.get(p.key)?.[0]?.id)
-        .filter((id): id is number => typeof id === 'number' && id > 0)
-        .sort((a, b) => a - b),
-    [grouped],
-  )
-  const { items: engagement, like } = useEngagement(latestIds)
-
-  const latestStamps = useMemo(
-    () =>
-      PAIRS.map((p) => ({ pair: p.key, at: grouped.get(p.key)?.[0]?.recorded_at ?? '' })).filter(
-        (l) => l.at,
-      ),
-    [grouped],
-  )
-  const { unseen, markSeen } = useUnseen(latestStamps)
-  const { copied, copy } = useCopy()
-
-  const { data: session } = useQuery({
-    queryKey: ['auth-user'],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getUser()
-      if (!data.user) return { email: null, isAdmin: false }
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', data.user.id)
-      return {
-        email: data.user.email ?? null,
-        isAdmin: !!roles?.some((r) => r.role === 'admin'),
-      }
-    },
-    staleTime: 60_000,
-  })
-
-  const [refreshMsg, setRefreshMsg] = useState<{ ok: boolean; text: string } | null>(null)
-
-  const triggerRefresh = async () => {
-    setRefreshing(true)
-    setRefreshMsg(null)
-    try {
-      const res = await fetch(apiUrl('/api/public/cron/refresh-rates'), { method: 'POST' })
-      const json = (await res.json().catch(() => null)) as { ok?: boolean } | null
-      await queryClient.invalidateQueries({ queryKey: ['rates'] })
-      await router.invalidate()
-      setRefreshMsg(
-        res.ok && json?.ok
-          ? { ok: true, text: t('refreshed_ok') }
-          : { ok: false, text: t('refresh_failed') },
-      )
-    } catch {
-      setRefreshMsg({ ok: false, text: t('refresh_failed') })
-    } finally {
-      setRefreshing(false)
-      setTimeout(() => setRefreshMsg(null), 4000)
-    }
-  }
+  const signIn = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) toast.error("ننوتل ناکام شول: " + error.message);
+  };
 
   const signOut = async () => {
-    setSigningOut(true)
-    try {
-      await supabase.auth.signOut()
-      navigate({ to: '/', replace: true })
-    } finally {
-      setSigningOut(false)
+    await supabase.auth.signOut();
+    setConversations([]);
+    setActiveId(null);
+    setMessages([]);
+  };
+
+  const openConversation = async (id: string) => {
+    setActiveId(id);
+    setSidebarOpen(false);
+    const { data } = await supabase
+      .from("messages")
+      .select("id, role, content, image_url")
+      .eq("conversation_id", id)
+      .order("created_at");
+    if (data) {
+      setMessages(
+        data.map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          image: m.image_url ?? undefined,
+        })),
+      );
     }
+  };
+
+  const newChat = () => {
+    setActiveId(null);
+    setMessages([]);
+    setImageMode(false);
+    setSidebarOpen(false);
+  };
+
+  const deleteConversation = async (id: string) => {
+    await supabase.from("conversations").delete().eq("id", id);
+    if (activeId === id) newChat();
+    loadConversations();
+  };
+
+  const ensureConversation = async (firstText: string): Promise<string | null> => {
+    if (activeId) return activeId;
+    if (!user) return null;
+    const title = firstText.slice(0, 40) || "نوې خبرې";
+    const { data, error } = await supabase
+      .from("conversations")
+      .insert({ user_id: user.id, title })
+      .select("id")
+      .single();
+    if (error || !data) return null;
+    setActiveId(data.id);
+    loadConversations();
+    return data.id;
+  };
+
+  const saveMessage = async (convId: string | null, msg: Msg) => {
+    if (!convId || !user) return;
+    await supabase.from("messages").insert({
+      conversation_id: convId,
+      role: msg.role,
+      content: msg.content,
+      image_url: msg.image ?? null,
+    });
+  };
+
+  const readFile = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+
+  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("عکس ډېر لوی دی (تر ۸MB لاندې وي).");
+      return;
+    }
+    setAttachment(await readFile(file));
+  };
+
+  const generateImage = async (prompt: string) => {
+    setBusy(true);
+    const convId = await ensureConversation(prompt);
+    const userMsg: Msg = { role: "user", content: `🎨 عکس جوړ کړه: ${prompt}` };
+    setMessages((p) => [...p, userMsg]);
+    await saveMessage(convId, userMsg);
+    try {
+      const res = await fetch("/api/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "ناکام");
+      const aiMsg: Msg = {
+        role: "assistant",
+        content: "ستاسو عکس چمتو دی! ✨",
+        image: data.image,
+      };
+      setMessages((p) => [...p, aiMsg]);
+      await saveMessage(convId, aiMsg);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "د عکس جوړول ناکام شول");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const send = async (text?: string) => {
+    const content = (text ?? input).trim();
+    if (!content && !attachment) return;
+    if (busy) return;
+
+    if (content === "__IMAGE_MODE__") {
+      setImageMode(true);
+      return;
+    }
+    if (imageMode) {
+      setInput("");
+      setImageMode(false);
+      await generateImage(content);
+      return;
+    }
+
+    setInput("");
+    setBusy(true);
+    const convId = await ensureConversation(content);
+
+    const userMsg: Msg = { role: "user", content, image: attachment ?? undefined };
+    setAttachment(null);
+    const history = [...messages, userMsg];
+    setMessages(history);
+    await saveMessage(convId, userMsg);
+
+    // placeholder assistant message to stream into
+    setMessages((p) => [...p, { role: "assistant", content: "" }]);
+
+    try {
+      const apiMessages = history.map((m) => {
+        if (m.image && m.role === "user") {
+          return {
+            role: m.role,
+            content: [
+              { type: "text", text: m.content || "دا عکس تحلیل کړه" },
+              { type: "image_url", image_url: { url: m.image } },
+            ],
+          };
+        }
+        return { role: m.role, content: m.content };
+      });
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages }),
+      });
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `ستونزه (${res.status})`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let full = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        full += decoder.decode(value, { stream: true });
+        const snapshot = full;
+        setMessages((p) => {
+          const copy = [...p];
+          copy[copy.length - 1] = { role: "assistant", content: snapshot };
+          return copy;
+        });
+      }
+      const aiMsg: Msg = { role: "assistant", content: full };
+      await saveMessage(convId, aiMsg);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "نامعلومه ستونزه";
+      setMessages((p) => {
+        const copy = [...p];
+        copy[copy.length - 1] = { role: "assistant", content: `⚠️ بخښنه غواړم، ستونزه رامنځته شوه: ${msg}` };
+        return copy;
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ---------- Loading ----------
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <StarLogo size={56} />
+      </div>
+    );
   }
 
-  const hasData = rates.length > 0
+  // ---------- Login gate ----------
+  if (!user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
+        <StarLogo size={72} />
+        <h1 className="mt-6 text-3xl font-bold text-foreground">Adris AI</h1>
+        <p className="mt-3 max-w-sm text-center text-sm leading-7 text-muted-foreground">
+          ستاسو پښتو ویاند مصنوعي مرستیال — خبرې اترې، عکس جوړول، کوډ او زده کړه.
+          د ۲۰۲۶ کال تازه معلوماتو سره.
+        </p>
+        <button
+          onClick={signIn}
+          className="mt-8 flex items-center gap-3 rounded-full bg-primary px-8 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:bg-primary/90"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+            <path fill="#fff" d="M21.35 11.1H12v2.9h5.35c-.5 2.4-2.55 3.9-5.35 3.9a6 6 0 1 1 0-12c1.5 0 2.9.55 3.95 1.5l2.2-2.2A8 8 0 1 0 12 20c4.6 0 7.65-3.2 7.65-7.7 0-.4-.05-.8-.15-1.2z"/>
+          </svg>
+          له جیمیل سره ننوتل
+        </button>
+        <p className="mt-6 text-xs text-muted-foreground">جوړونکی: ادریس روحاني</p>
+      </div>
+    );
+  }
 
+  const firstName = user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "ملګري";
 
+  // ---------- Main app ----------
   return (
-    <div dir={dir} className="min-h-screen bg-gradient-to-b from-emerald-50/60 via-background to-background dark:from-emerald-950/20">
-      <header className="border-b border-border/60 bg-background/80 backdrop-blur sticky top-0 z-10">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
-          <div className="min-w-0">
-            <h1 className="text-base font-bold tracking-tight text-foreground truncate">
-              {t('app_title')}
-            </h1>
-            <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
-              {session?.isAdmin && (
-                <span className="inline-flex items-center gap-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-1 py-0.5 text-[10px] font-medium">
-                  <ShieldCheck className="h-2.5 w-2.5" /> Admin
-                </span>
-              )}
-              <span className="truncate">{session?.email ?? t('tagline')}</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <LanguageMenu />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={triggerRefresh}
-              disabled={refreshing}
-              className="gap-1.5"
+    <div className="flex h-dvh bg-background">
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 right-0 z-40 w-72 transform border-l border-sidebar-border bg-sidebar transition-transform md:static md:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-2">
+              <StarLogo size={28} />
+              <span className="font-bold text-sidebar-foreground">Adris AI</span>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-md p-1.5 text-sidebar-foreground/70 hover:bg-sidebar-accent md:hidden"
+              aria-label="بندول"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{t('refresh')}</span>
-            </Button>
-            {session?.email ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={signOut}
-                disabled={signingOut}
-                className="gap-1.5"
-                aria-label="Sign out"
+              <X size={18} />
+            </button>
+          </div>
+          <button
+            onClick={newChat}
+            className="mx-4 flex items-center justify-center gap-2 rounded-full bg-sidebar-primary px-4 py-2.5 text-sm font-semibold text-sidebar-primary-foreground transition hover:opacity-90"
+          >
+            <Plus size={16} /> نوې خبرې
+          </button>
+          <div className="mt-4 flex-1 overflow-y-auto px-3 chat-scroll">
+            {conversations.map((c) => (
+              <div
+                key={c.id}
+                className={`group mb-1 flex items-center gap-1 rounded-lg px-3 py-2.5 text-sm transition ${
+                  activeId === c.id
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60"
+                }`}
               >
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-            ) : (
-              <Button asChild size="sm" variant="ghost" className="gap-1.5">
-                <Link to="/auth">Sign in</Link>
-              </Button>
+                <button onClick={() => openConversation(c.id)} className="flex-1 truncate text-right">
+                  {c.title}
+                </button>
+                <button
+                  onClick={() => deleteConversation(c.id)}
+                  className="hidden rounded p-1 text-sidebar-foreground/50 hover:text-destructive group-hover:block"
+                  aria-label="ړنګول"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {!conversations.length && (
+              <p className="px-3 py-6 text-center text-xs text-sidebar-foreground/50">
+                لا تر اوسه خبرې نشته
+              </p>
             )}
+          </div>
+          <div className="border-t border-sidebar-border p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
+                {firstName[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-sidebar-foreground">{firstName}</p>
+                <p className="truncate text-xs text-sidebar-foreground/50">{user.email}</p>
+              </div>
+              <button
+                onClick={signOut}
+                className="rounded-md p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                aria-label="وتل"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
           </div>
         </div>
-      </header>
+      </aside>
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-
-      <main className="mx-auto max-w-3xl px-4 py-6 space-y-6">
-        {mounted && data.fromCache && (
-          <div className="flex items-center justify-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
-            <WifiOff className="h-3.5 w-3.5" />
-            {t('cached_notice')}
-          </div>
-        )}
-        {refreshMsg && (
-          <div
-            role="status"
-            aria-live="polite"
-            className={`rounded-md px-3 py-2 text-center text-xs font-medium ${
-              refreshMsg.ok
-                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
-                : 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
-            }`}
-          >
-            {refreshMsg.text}
-          </div>
-        )}
-        {ago && (
-          <p className="text-xs text-muted-foreground text-center">
-            {t('last_updated')} {ago}
-          </p>
-        )}
-
-        {unseen.size > 0 && (
+      {/* Main */}
+      <main className="flex min-w-0 flex-1 flex-col">
+        {/* Header */}
+        <header className="flex items-center gap-3 border-b border-border px-4 py-3">
           <button
-            type="button"
-            onClick={markSeen}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-emerald-300/60 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800/50 px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 shadow-sm transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-md p-2 text-foreground/70 hover:bg-accent md:hidden"
+            aria-label="مینو"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
-            </span>
-            {t('new_rates_banner')} ({unseen.size})
+            <Menu size={20} />
           </button>
-        )}
+          <div className="flex items-center gap-2">
+            <StarLogo size={24} />
+            <span className="text-sm font-semibold text-foreground">Adris AI</span>
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+              Gemini 3.1 Pro
+            </span>
+          </div>
+        </header>
 
-        {!hasData ? (
-          <Card className="p-8 text-center">
-            <p className="text-sm font-semibold text-foreground mb-1">
-              {data.error ? t('error_title') : t('no_data')}
-            </p>
-            {data.error && (
-              <p className="text-xs text-muted-foreground mb-4">{t('error_body')}</p>
-            )}
-            <Button onClick={triggerRefresh} disabled={refreshing} className="gap-2 mt-3">
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? t('loading_rates') : data.error ? t('retry') : t('load_rates')}
-            </Button>
-
-          </Card>
-        ) : (
-          <section className="grid gap-3">
-            {PAIRS.map((p) => {
-              const history = grouped.get(p.key) ?? []
-              const latest = history[0]
-              const previous = history[1]
-              if (!latest) return null
-              const mid = (Number(latest.buy) + Number(latest.sell)) / 2
-              const prevMid = previous ? (Number(previous.buy) + Number(previous.sell)) / 2 : mid
-              const delta = mid - prevMid
-              const pct = prevMid ? (delta / prevMid) * 100 : 0
-              const up = delta >= 0
-              const trend = trendProbability(history)
-              const pUp = Math.round(trend.pUp * 100)
-              const isNew = unseen.has(p.key)
-              return (
-                <Card key={p.key} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 text-2xl">
-                        <span>
-                          {p.fromFlag} <span className="text-muted-foreground">→</span> {p.toFlag}
-                        </span>
-                        {isNew && (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 animate-pulse">
-                            <Sparkles className="h-2.5 w-2.5" />
-                            {t('new_badge')}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {t(`pair_${p.key}` as 'pair_USD_AFN')}
-                      </p>
-                      <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
-                        <Clock className="h-3 w-3" />
-                        {t('posted_at')} {mounted ? formatKabulTime(latest.recorded_at) : ''}
-                      </p>
-                    </div>
-                    <div
-                      className={`flex items-center gap-1 text-xs font-medium ${
-                        up ? 'text-emerald-600' : 'text-rose-600'
-                      }`}
-                    >
-                      {up ? (
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      ) : (
-                        <ArrowDownRight className="h-3.5 w-3.5" />
-                      )}
-                      {pct ? `${up ? '+' : ''}${pct.toFixed(2)}%` : '—'}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {t('buy')}
-                      </p>
-                      <p className="font-mono text-xl font-semibold text-foreground tabular-nums">
-                        {formatNum(Number(latest.buy))}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {t('sell')}
-                      </p>
-                      <p className="font-mono text-xl font-semibold text-foreground tabular-nums">
-                        {formatNum(Number(latest.sell))}
-                      </p>
-                    </div>
-                  </div>
-
-                  {history.length > 1 && (
-                    <div className="mt-3 h-16">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={history
-                            .slice()
-                            .reverse()
-                            .map((r) => ({
-                              date: r.recorded_date.slice(5),
-                              value: (Number(r.buy) + Number(r.sell)) / 2,
-                            }))}
-                        >
-                          <XAxis dataKey="date" hide />
-                          <YAxis hide domain={['dataMin', 'dataMax']} />
-                          <Tooltip
-                            contentStyle={{ fontSize: 11, padding: 6, borderRadius: 6 }}
-                            formatter={(v: number) => formatNum(v)}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="value"
-                            stroke={up ? '#059669' : '#dc2626'}
-                            strokeWidth={2}
-                            dot={false}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+        {/* Chat area */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto chat-scroll">
+          {!messages.length ? (
+            <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center px-6 pb-24">
+              <StarLogo size={64} />
+              <h1 className="mt-6 text-2xl font-bold text-foreground md:text-3xl">
+                سلام، {firstName}!
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">نن څه کولای شم ستاسو لپاره؟</p>
+              <div className="mt-10 grid w-full grid-cols-2 gap-3">
+                {QUICK_CARDS.map((c) => (
+                  <button
+                    key={c.title}
+                    onClick={() => send(c.prompt)}
+                    className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-card p-4 text-right transition hover:border-primary/40 hover:bg-accent"
+                  >
+                    <c.icon size={22} className="text-primary" />
+                    <span className="text-sm font-semibold text-card-foreground">{c.title}</span>
+                    <span className="text-xs text-muted-foreground">{c.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto max-w-3xl px-4 py-6">
+              {messages.map((m, i) => (
+                <div
+                  key={i}
+                  className={`mb-6 flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}
+                >
+                  {m.role === "assistant" && (
+                    <div className="mt-1 shrink-0">
+                      <StarLogo size={26} />
                     </div>
                   )}
-
-                  <div className="mt-3 flex items-center gap-3 border-t border-border/60 pt-3">
-                    <button
-                      type="button"
-                      onClick={() => like(latest.id)}
-                      aria-pressed={!!engagement[latest.id]?.liked}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                        engagement[latest.id]?.liked
-                          ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400'
-                          : 'bg-muted/60 text-muted-foreground hover:bg-muted'
-                      }`}
-                    >
-                      <Heart
-                        className={`h-3.5 w-3.5 ${engagement[latest.id]?.liked ? 'fill-current' : ''}`}
+                  <div
+                    className={`max-w-[85%] ${
+                      m.role === "user"
+                        ? "rounded-2xl rounded-tl-sm bg-primary px-4 py-3 text-primary-foreground"
+                        : "text-foreground"
+                    }`}
+                  >
+                    {m.image && (
+                      <img
+                        src={m.image}
+                        alt="عکس"
+                        className="mb-2 max-w-full rounded-xl border border-border"
+                        style={{ maxHeight: 320 }}
                       />
-                      <span className="tabular-nums">{engagement[latest.id]?.likes ?? 0}</span>
-                      <span className="hidden sm:inline">{t('likes')}</span>
-                    </button>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Eye className="h-3.5 w-3.5" />
-                      <span className="tabular-nums">{engagement[latest.id]?.views ?? 0}</span>
-                      <span className="hidden sm:inline">{t('views')}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        copy(
-                          p.key,
-                          `${t(`pair_${p.key}` as 'pair_USD_AFN')}\n${t('buy')}: ${formatNum(
-                            Number(latest.buy),
-                          )}\n${t('sell')}: ${formatNum(Number(latest.sell))}\n${t(
-                            'posted_at',
-                          )} ${formatKabulTime(latest.recorded_at)}\n${t('app_title')}`,
-                        )
-                      }
-                      className={`ms-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
-                        copied === p.key
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 scale-105'
-                          : 'bg-muted/60 text-muted-foreground hover:bg-muted active:scale-95'
-                      }`}
-                    >
-                      {copied === p.key ? (
-                        <Check className="h-3.5 w-3.5" />
+                    )}
+                    {m.role === "assistant" ? (
+                      m.content ? (
+                        <div className="prose prose-sm prose-invert max-w-none leading-8 [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_pre]:rounded-xl [&_pre]:bg-muted [&_pre]:p-3" dir="rtl">
+                          <ReactMarkdown>{m.content}</ReactMarkdown>
+                        </div>
                       ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                      {copied === p.key ? t('copied') : t('copy')}
-                    </button>
+                        <div className="flex gap-1.5 py-2">
+                          <span className="adris-dot h-2 w-2 rounded-full bg-primary" />
+                          <span className="adris-dot h-2 w-2 rounded-full bg-primary" />
+                          <span className="adris-dot h-2 w-2 rounded-full bg-primary" />
+                        </div>
+                      )
+                    ) : (
+                      <p className="whitespace-pre-wrap text-sm leading-7">{m.content}</p>
+                    )}
                   </div>
-
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <div className="text-[11px] text-muted-foreground">
-                      <span className={pUp >= 50 ? 'text-emerald-600' : 'text-rose-600'}>
-                        {pUp}%
-                      </span>{' '}
-                      {pUp >= 50 ? t('prob_up') : t('prob_down').replace('down', 'down')}
-                    </div>
-                    <Button asChild size="sm" variant="ghost" className="gap-1 h-7">
-                      <Link to="/chart/$pair" params={{ pair: p.key }}>
-                        <BarChart3 className="h-3.5 w-3.5" />
-                        {t('candlestick')}
-                      </Link>
-                    </Button>
+                </div>
+              ))}
+              {busy && messages[messages.length - 1]?.role === "user" && (
+                <div className="mb-6 flex gap-3">
+                  <StarLogo size={26} />
+                  <div className="flex gap-1.5 py-2">
+                    <span className="adris-dot h-2 w-2 rounded-full bg-primary" />
+                    <span className="adris-dot h-2 w-2 rounded-full bg-primary" />
+                    <span className="adris-dot h-2 w-2 rounded-full bg-primary" />
                   </div>
-                </Card>
-              )
-            })}
-          </section>
-        )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-        {hasData && <Converter grouped={grouped} />}
-
-        <footer className="pt-6 pb-24 text-center text-[11px] text-muted-foreground">
-          {t('footer')}
-        </footer>
-      </main>
-
-      {session?.isAdmin && <AdminChat />}
-    </div>
-  )
-}
-
-function Converter({ grouped }: { grouped: Map<string, RateRow[]> }) {
-  const { t } = useI18n()
-  const [from, setFrom] = useState<'USD' | 'AFN' | 'PKR'>('USD')
-  const [to, setTo] = useState<'USD' | 'AFN' | 'PKR'>('AFN')
-  const [amount, setAmount] = useState('1')
-
-  const rate = useMemo(() => {
-    if (from === to) return 1
-    const get = (pair: PairKey) => {
-      const r = grouped.get(pair)?.[0]
-      if (!r) return null
-      return (Number(r.buy) + Number(r.sell)) / 2
-    }
-    const usdAfn = get('USD_AFN')
-    const usdPkr = get('USD_PKR')
-    const afnPkr = get('AFN_PKR')
-    const direct: Record<string, number | null> = {
-      USD_AFN: usdAfn,
-      AFN_USD: usdAfn ? 1 / usdAfn : null,
-      USD_PKR: usdPkr,
-      PKR_USD: usdPkr ? 1 / usdPkr : null,
-      AFN_PKR: afnPkr,
-      PKR_AFN: afnPkr ? 1 / afnPkr : null,
-    }
-    const directRate = direct[`${from}_${to}`]
-    if (directRate) return directRate
-    if (usdAfn && usdPkr) {
-      if (from === 'AFN' && to === 'PKR') return usdPkr / usdAfn
-      if (from === 'PKR' && to === 'AFN') return usdAfn / usdPkr
-    }
-    return null
-  }, [from, to, grouped])
-
-  const value = parseFloat(amount)
-  const result = rate && !Number.isNaN(value) ? value * rate : null
-
-  const swap = () => {
-    setFrom(to)
-    setTo(from)
-  }
-
-  return (
-    <Card className="p-4">
-      <h2 className="text-sm font-semibold text-foreground mb-3">{t('quick_converter')}</h2>
-      <div className="grid gap-3">
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {t('from')}
-            </label>
-            <div className="flex gap-2 mt-1">
-              <Select value={from} onValueChange={(v) => setFrom(v as 'USD')}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="AFN">AFN</SelectItem>
-                  <SelectItem value="PKR">PKR</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                inputMode="decimal"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="flex-1 font-mono"
+        {/* Composer */}
+        <div className="border-t border-border bg-background p-3 md:p-4">
+          <div className="mx-auto max-w-3xl">
+            {attachment && (
+              <div className="relative mb-2 inline-block">
+                <img src={attachment} alt="ضمیمه" className="h-20 rounded-xl border border-border" />
+                <button
+                  onClick={() => setAttachment(null)}
+                  className="absolute -left-2 -top-2 rounded-full bg-destructive p-1 text-destructive-foreground"
+                  aria-label="لرې کول"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+            {imageMode && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
+                <Sparkles size={14} />
+                د عکس جوړولو حالت — خپل عکس په ګوته کړئ
+                <button onClick={() => setImageMode(false)} className="mr-auto" aria-label="لغوه">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+            <div className="flex items-end gap-2 rounded-3xl border border-input bg-card p-2">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="rounded-full p-2.5 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                  aria-label="له ګالري عکس"
+                >
+                  <Paperclip size={18} />
+                </button>
+                <button
+                  onClick={() => cameraRef.current?.click()}
+                  className="rounded-full p-2.5 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                  aria-label="کیمره"
+                >
+                  <Camera size={18} />
+                </button>
+              </div>
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+                placeholder={imageMode ? "څه ډول عکس جوړ کړم؟" : "له ادریس AI څخه وپوښتئ..."}
+                rows={1}
+                className="max-h-32 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                dir="rtl"
               />
+              <button
+                onClick={() => send()}
+                disabled={busy || (!input.trim() && !attachment)}
+                className="rounded-full bg-primary p-2.5 text-primary-foreground transition hover:bg-primary/90 disabled:opacity-40"
+                aria-label="لېږل"
+              >
+                {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="-scale-x-100" />}
+              </button>
             </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={swap} className="mb-0.5">
-            <ArrowRightLeft className="h-4 w-4" />
-          </Button>
-        </div>
-        <div>
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t('to')}
-          </label>
-          <div className="flex gap-2 mt-1">
-            <Select value={to} onValueChange={(v) => setTo(v as 'USD')}>
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USD">USD</SelectItem>
-                <SelectItem value="AFN">AFN</SelectItem>
-                <SelectItem value="PKR">PKR</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex-1 rounded-md border border-input bg-muted/40 px-3 py-2 font-mono text-sm tabular-nums">
-              {result !== null ? formatNum(result) : '—'}
-            </div>
+            <p className="mt-2 text-center text-[10px] text-muted-foreground">
+              Adris AI — د ادریس روحاني لخوا جوړ شوی
+            </p>
           </div>
         </div>
-      </div>
-    </Card>
-  )
+
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onPickFile} />
+      </main>
+    </div>
+  );
 }
