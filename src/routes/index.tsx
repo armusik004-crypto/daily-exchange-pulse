@@ -24,7 +24,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { chatDb } from "@/lib/chat-db";
-import starScene from "@/assets/adris-star-scene.webp.asset.json";
+import starScene from "@/assets/adris-orbit.webp.asset.json";
 import type { User } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/")({
