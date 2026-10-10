@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Use the existing TanStack route and semantic CSS tokens for Adris AI's reference-based UI; shared visual assets are CDN pointers so the same artwork serves every screen.
+- Keep additive chat-history typings in a separate typed client wrapper until Cloud schema generation is available; never edit generated integration files.
