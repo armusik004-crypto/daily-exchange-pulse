@@ -6,7 +6,7 @@ export type ImageConfig = {
 
 export const imageSettings: Omit<ImageConfig, "apiKey"> = {
   baseURL: "https://ai.gateway.lovable.dev",
-  model: "google/gemini-3.1-flash-lite-image",
+  model: "google/gemini-3-pro-image",
 };
 
 export function generateImage(config: ImageConfig, prompt: string, stream = true) {
