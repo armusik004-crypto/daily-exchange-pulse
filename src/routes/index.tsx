@@ -24,6 +24,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { chatDb } from "@/lib/chat-db";
+import { streamImage } from "@/lib/stream-image";
 import starScene from "@/assets/adris-orbit.webp.asset.json";
 import type { User } from "@supabase/supabase-js";
 
@@ -71,6 +72,7 @@ function AdrisApp() {
   const [attachment, setAttachment] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [imageMode, setImageMode] = useState(false);
+  const [imageFinal, setImageFinal] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -204,19 +206,19 @@ function AdrisApp() {
     setMessages((p) => [...p, userMsg]);
     await saveMessage(convId, userMsg);
     try {
-      const res = await fetch("/api/image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+      setImageFinal(false);
+      let generatedImage = "";
+      setMessages((p) => [...p, { role: "assistant", content: "عکس جوړېږي…" }]);
+      await streamImage("/api/image", { prompt }, (image, isFinal) => {
+        generatedImage = image;
+        setImageFinal(isFinal);
+        setMessages((p) => {
+          const next = [...p];
+          next[next.length - 1] = { role: "assistant", content: isFinal ? "ستاسو عکس چمتو دی!" : "عکس جوړېږي…", image };
+          return next;
+        });
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "ناکام");
-      const aiMsg: Msg = {
-        role: "assistant",
-        content: "ستاسو عکس چمتو دی! ✨",
-        image: data.image,
-      };
-      setMessages((p) => [...p, aiMsg]);
+      const aiMsg: Msg = { role: "assistant", content: "ستاسو عکس چمتو دی!", image: generatedImage };
       await saveMessage(convId, aiMsg);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "د عکس جوړول ناکام شول");
@@ -409,7 +411,7 @@ function AdrisApp() {
           <Button variant="ghost" className="neon-icon" onClick={() => setSidebarOpen(true)} aria-label="مینو" title="مینو"><Menu /></Button>
           <div className="brand-stack">
             <div className="brand-title"><StarLogo size={24} /><span>Adris AI</span></div>
-            <span className="pro-badge" title="Gemini 3.1 Pro">Pro <ChevronDown size={14} /></span>
+            <Button variant="ghost" className="pro-badge" title="Gemini 3.1 Pro" onClick={() => toast.success("Gemini 3.1 Pro فعال دی")}>Pro <ChevronDown size={14} /></Button>
           </div>
           <Button variant="ghost" className="profile-orb" onClick={user ? () => setSidebarOpen(true) : signIn} aria-label={user ? "حساب" : "له جیمیل سره ننوتل"} title={user ? "حساب" : "له جیمیل سره ننوتل"}>{user ? firstName.slice(0,2) : "Ar"}</Button>
         </header>
@@ -453,7 +455,7 @@ function AdrisApp() {
                       <img
                         src={m.image}
                         alt="عکس"
-                        className="mb-2 max-w-full rounded-xl border border-border"
+                        className={`mb-2 max-w-full rounded-xl border border-border transition-[filter] duration-500 ${m.role === "assistant" && !imageFinal && i === messages.length - 1 ? "blur-xl" : "blur-0"}`}
                         style={{ maxHeight: 320 }}
                       />
                     )}
