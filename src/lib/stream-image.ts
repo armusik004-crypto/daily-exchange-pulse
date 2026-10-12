@@ -38,7 +38,9 @@ export async function streamImage(
       sawEvent = true;
       if (!payload.b64_json) return;
       const isFinal = type === "image_generation.completed";
-      flushSync(() => onFrame(`data:image/png;base64,${payload.b64_json}`, isFinal));
+      // Gemini returns JPEG bytes even when served as PNG-typed events; sniff the header.
+      const mime = payload.b64_json.startsWith("iVBOR") ? "image/png" : "image/jpeg";
+      flushSync(() => onFrame(`data:${mime};base64,${payload.b64_json}`, isFinal));
       completed ||= isFinal;
     },
   });
