@@ -22,6 +22,7 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { lovable } from "@/integrations/lovable";
 import { chatDb } from "@/lib/chat-db";
 import { streamImage } from "@/lib/stream-image";
