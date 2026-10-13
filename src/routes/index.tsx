@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { lovable } from "@/integrations/lovable";
 import { chatDb } from "@/lib/chat-db";
 import { streamImage } from "@/lib/stream-image";
 import starScene from "@/assets/adris-orbit.webp.asset.json";
@@ -108,9 +109,8 @@ function AdrisApp() {
   }, [messages, busy]);
 
   const signIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
+    const { error } = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
     if (error) toast.error("ننوتل ناکام شول: " + error.message);
   };

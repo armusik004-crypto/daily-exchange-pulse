@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791879660605,
+      "tag": "0000_create_adris_chat_history",
+      "breakpoints": true
+    }
+  ]
+}
