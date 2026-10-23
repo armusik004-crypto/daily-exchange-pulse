@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { lovable } from "@/integrations/lovable";
 import { chatDb } from "@/lib/chat-db";
 import { streamImage } from "@/lib/stream-image";
+import { apiUrl } from "@/lib/api-base";
 import starScene from "@/assets/adris-orbit.webp.asset.json";
 import type { User } from "@supabase/supabase-js";
 
@@ -209,7 +210,7 @@ function AdrisApp() {
       setImageFinal(false);
       let generatedImage = "";
       setMessages((p) => [...p, { role: "assistant", content: "عکس جوړېږي…" }]);
-      await streamImage("/api/image", { prompt }, (image, isFinal) => {
+      await streamImage(apiUrl("/api/image"), { prompt }, (image, isFinal) => {
         generatedImage = image;
         setImageFinal(isFinal);
         setMessages((p) => {
@@ -271,7 +272,7 @@ function AdrisApp() {
         return { role: m.role, content: m.content };
       });
 
-      const res = await fetch("/api/chat", {
+      const res = await fetch(apiUrl("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: apiMessages }),
