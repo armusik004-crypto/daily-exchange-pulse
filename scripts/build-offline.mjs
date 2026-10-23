@@ -29,8 +29,8 @@ writeFileSync(
   "dist/capacitor.config.json",
   JSON.stringify(
     {
-      appId: "com.kandahar.rates",
-      appName: "Kandahar Market Rates",
+      appId: "com.adris.ai",
+      appName: "Adris AI",
       webDir: "offline-app",
       android: { allowMixedContent: true },
     },
@@ -39,5 +39,5 @@ writeFileSync(
   ),
 );
 
-execSync("cd dist && zip -qr ../kandahar-rates-offline.zip offline-app capacitor.config.json");
-console.log("Created kandahar-rates-offline.zip");
+execSync("cd dist && zip -qr ../adris-ai-offline.zip offline-app capacitor.config.json");
+console.log("Created adris-ai-offline.zip");
